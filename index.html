@@ -121,7 +121,8 @@
 
     @media (max-width: 768px) {
       .hamburger-btn { display: block; }
-      #header-controls { display: none; }
+      #header-controls { display: none !important; }
+      .divider-btn { display: none !important; }
     }
 
     #export-json-btn, #import-json-btn {
@@ -662,11 +663,11 @@
       #header { 
         padding: 12px 14px 8px; 
         gap: 6px;
-        flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
+        justify-content: space-between;
       }
       
-      #logo-block { width: 100%; }
+      #logo-block { width: auto; }
       #logo-block h1 { font-size: 13px; letter-spacing: 2px; }
       #logo-block .eyebrow { font-size: 8px; }
 
@@ -696,9 +697,11 @@
       #config-panel { 
         padding: 12px 14px 14px; 
         flex-direction: column; 
+        flex-wrap: nowrap;
         gap: 12px;
         max-height: 60vh;
         overflow-y: auto;
+        width: 100%;
       }
       
       .key-row {
@@ -780,6 +783,7 @@
       #input-wrap { 
         gap: 8px;
         flex-direction: column;
+        width: 100%;
       }
 
       #send-btn { 
@@ -793,6 +797,7 @@
         font-size: 14px; 
         padding: 12px;
         min-height: 44px;
+        width: 100%;
       }
       
       #input-hint { 
