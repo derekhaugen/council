@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Council</title>
+  <meta name="description" content="A multi-model AI roundtable. Put one question to Claude, GPT, Gemini — or any model you add — and watch them agree, diverge, and respond to each other. Bring your own API keys and control the conversation." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2309090c'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='%23E8A838' font-family='monospace' font-weight='bold'%3EC%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #09090c;
+      --surface:  #0f1014;
+      --border:   #1e2028;
+      --muted:    #6b6f7e;
+      --muted-hi: #979cae;  /* readable secondary text — task surfaces, not chrome */
+      --border-hi:#3a3e4e;  /* visible boundaries for inputs and controls */
+      --text:     #cac5ba;
+      --dim:      #666070;
+      --claude:   #E8A838;
+      --openai:   #19C37D;
+      --gemini:   #5B8DEF;
+      --user:     #9d8fff;
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Lora', Georgia, serif; }
+
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    /* ── HEADER ── */
+    #header {
+      padding: 18px 28px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    #logo-block .eyebrow {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 4px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    #logo-block h1 {
+      font-family: 'Courier Prime', monospace;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    #header-controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .hamburger-btn {
+      background: none;
+      border: 1px solid var(--border-hi);
+      color: var(--text);
+      font-size: 20px;
+      padding: 6px 12px;
+      cursor: pointer;
+      border-radius: 2px;
+      display: none;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .hamburger-menu {
+      position: fixed;
+      top: 0;
+      right: -300px;
+      width: 280px;
+      height: 100vh;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      padding: 80px 14px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: right 0.3s ease;
+      z-index: 200;
+      overflow-y: auto;
+    }
+
+    .hamburger-menu.open {
+      right: 0;
+    }
+
+    .hamburger-menu .pill-btn {
+      width: 100%;
+      text-align: left;
+      justify-content: flex-start;
+    }
+
+    @media (max-width: 768px) {
+      .hamburger-btn { display: block; }
+      #header-controls { display: none; }
+    }
+
+    #export-json-btn, #import-json-btn {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 5px 11px;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    #export-json-btn:hover, #import-json-btn:hover {
+      border-color: var(--muted);
+      color: var(--text);
+    }
+
+    #import-file-input {
+      display: none;
+    }
+
+    .pill-btn {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 5px 11px;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .pill-btn:hover { border-color: var(--muted); color: var(--text); }
+    .pill-btn.active-claude { border-color: var(--claude); color: var(--claude); background: rgba(232,168,56,.08); }
+    .pill-btn.active-openai { border-color: var(--openai); color: var(--openai); background: rgba(25,195,125,.08); }
+    .pill-btn.active-gemini { border-color: var(--gemini); color: var(--gemini); background: rgba(91,141,239,.08); }
+    .response-body.stopped { color: var(--muted); font-style: italic; }
+    #stop-btn {
+      display: none;
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 12px 18px;
+      border: 1px solid #e8855a;
+      border-radius: 2px;
+      background: rgba(232,133,90,.08);
+      color: #e8855a;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      align-self: flex-end;
+    }
+    #stop-btn.visible { display: inline-block; }
+    #stop-btn:hover { background: rgba(232,133,90,.18); }
+    .interjection {
+      align-self: flex-end;
+      max-width: 70%;
+      margin: 6px 0 10px auto;
+      padding: 8px 12px;
+      border: 1px solid var(--user);
+      border-radius: 3px;
+      background: rgba(157,143,255,.06);
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
+    .interjection .ij-label {
+      font-family: 'Courier Prime', monospace;
+      font-size: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--user);
+      margin-bottom: 4px;
+    }
+    .pill-btn.active-keys { border-color: var(--muted-hi); color: var(--text); background: rgba(151,156,174,.08); }
+    .pill-btn.pill-add {
+      border-style: dashed;
+      border-color: var(--border-hi);
+      color: var(--muted-hi);
+      min-width: 28px;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+    .pill-btn.pill-add:hover { border-color: var(--text); color: var(--text); }
+    .pill-btn.active-voice  { border-color: var(--user); color: var(--user); background: rgba(157,143,255,.08); }
+
+    .divider-btn {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+      margin: 0 2px;
+    }
+
+    /* ── KEYS PANEL ── */
+    #config-panel {
+      display: none;
+      background: #0c0d11;
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    #config-panel.open { display: flex; }
+
+    #json-popover {
+      display: none;
+      position: fixed;
+      top: auto;
+      bottom: 80px;
+      left: 14px;
+      right: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-radius: 3px;
+      padding: 12px;
+      gap: 8px;
+      flex-direction: column;
+      z-index: 100;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    #json-popover.open { display: flex; }
+    
+    @media (min-width: 769px) {
+      #json-popover {
+        position: absolute;
+        top: 65px;
+        bottom: auto;
+        left: auto;
+        right: 28px;
+        min-width: 160px;
+      }
+    }
+
+    .json-popover-btn {
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 8px 12px;
+      border: 1px solid var(--border-hi);
+      background: transparent;
+      color: var(--muted-hi);
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.15s;
+    }
+
+    .json-popover-btn:hover {
+      border-color: var(--text);
+      color: var(--text);
+      background: rgba(202,197,186,.06);
+    }
+
+    .key-row { display: flex; align-items: center; gap: 10px; }
+
+    .key-label {
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      color: var(--muted-hi);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .key-input {
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-radius: 2px;
+      padding: 7px 10px;
+      color: var(--text);
+      font-family: 'Courier Prime', monospace;
+      font-size: 12.5px;
+      flex: 1;
+      min-width: 200px;
+      max-width: 400px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .key-input::placeholder { color: #5d6274; }
+
+    .key-input:focus { border-color: var(--muted-hi); }
+
+    .key-toggle-btn {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 5px 10px;
+      border: 1px solid var(--border-hi);
+      background: transparent;
+      color: var(--muted-hi);
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.15s;
+    }
+
+    .key-toggle-btn:hover {
+      border-color: var(--text);
+      color: var(--text);
+    }
+
+    #custom-models-section {
+      flex-basis: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border-top: 1px solid var(--border-hi);
+      padding-top: 12px;
+    }
+    .add-model-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .am-input { width: 170px; }
+    .am-input.wide { width: 320px; }
+    .am-color {
+      width: 30px; height: 30px; padding: 2px;
+      background: var(--surface); border: 1px solid var(--border-hi);
+      border-radius: 2px; cursor: pointer;
+    }
+    .custom-model-row {
+      display: flex; align-items: center; gap: 10px;
+      font-family: 'Courier Prime', monospace; font-size: 12px;
+    }
+    .custom-model-row .cm-swatch {
+      width: 10px; height: 10px; border-radius: 2px; display: inline-block;
+    }
+    .custom-model-row .cm-detail { color: var(--muted-hi); font-size: 11px; }
+    .cm-remove {
+      background: none; border: 1px solid var(--border-hi); border-radius: 2px;
+      color: var(--muted-hi); font-size: 11px; padding: 2px 8px; cursor: pointer;
+    }
+    .cm-remove:hover { border-color: #e8855a; color: #e8855a; }
+
+    .keys-note {
+      font-family: 'Courier Prime', monospace;
+      font-size: 10.5px;
+      color: var(--muted-hi);
+      letter-spacing: 0.5px;
+      line-height: 1.6;
+      margin-left: auto;
+    }
+
+    /* ── THREAD ── */
+    #thread {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px 28px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .empty-state { margin: auto; text-align: center; }
+
+    .empty-state .glyph {
+      font-family: 'Courier Prime', monospace;
+      font-size: 48px;
+      color: var(--border);
+      margin-bottom: 16px;
+    }
+
+    .empty-state p {
+      font-family: 'Courier Prime', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* ── TURN ── */
+    .turn { display: flex; flex-direction: column; gap: 0; }
+
+    .turn-number {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .blind-tag {
+      color: #e8855a;
+      border: 1px solid rgba(232,133,90,.35);
+      border-radius: 2px;
+      padding: 1px 6px;
+      margin-left: 8px;
+      letter-spacing: 2px;
+    }
+
+    .continued-tag {
+      color: #979cae;
+      border: 1px solid rgba(151,156,174,.35);
+      border-radius: 2px;
+      padding: 1px 6px;
+      margin-left: 8px;
+      letter-spacing: 2px;
+      font-weight: 400;
+    }
+
+    .user-msg {
+      align-self: flex-end;
+      max-width: 72%;
+      background: rgba(157,143,255,.07);
+      border: 1px solid rgba(157,143,255,.2);
+      border-radius: 2px 2px 0 2px;
+      padding: 12px 16px;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #d4d0f8;
+    }
+
+    .user-label {
+      font-family: 'Courier Prime', monospace;
+      font-size: 8px;
+      letter-spacing: 3px;
+      color: rgba(157,143,255,.5);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .responses { display: flex; flex-direction: column; gap: 0; margin-top: 2px; }
+
+    .response-card {
+      border-left: 2px solid var(--border);
+      padding: 16px 18px 16px 20px;
+      position: relative;
+      transition: background 0.3s;
+    }
+
+    .response-card + .response-card { border-top: 1px solid var(--border); }
+    .response-card.claude { border-left-color: var(--claude); }
+    .response-card.openai { border-left-color: var(--openai); }
+    .response-card.gemini { border-left-color: var(--gemini); }
+
+    /* Speaking state */
+    .response-card.speaking { background: rgba(255,255,255,.015); }
+    .response-card.speaking .model-tag { animation: speaking-pulse 1.2s ease-in-out infinite; }
+
+    @keyframes speaking-pulse {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+
+    .response-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .model-tag {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .model-tag.claude { color: var(--claude); }
+    .model-tag.openai { color: var(--openai); }
+    .model-tag.gemini { color: var(--gemini); }
+
+    .speak-btn {
+      background: none;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-family: 'Courier Prime', monospace;
+      font-size: 8px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      padding: 2px 6px;
+      border-radius: 2px;
+      transition: all 0.15s;
+      opacity: 0.5;
+    }
+
+    .speak-btn:hover { opacity: 1; border-color: var(--muted); color: var(--text); }
+
+    .response-body { font-size: 14.5px; line-height: 1.75; color: var(--text); }
+    .response-body.error { font-family: 'Courier Prime', monospace; font-size: 12px; color: #c0505a; }
+
+    .thinking { display: flex; gap: 5px; align-items: center; padding: 4px 0; }
+    .thinking span {
+      width: 4px; height: 4px; border-radius: 50%;
+      background: var(--muted);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .thinking span:nth-child(2) { animation-delay: 0.2s; }
+    .thinking span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse {
+      0%, 60%, 100% { opacity: 0.2; transform: scale(1); }
+      30% { opacity: 1; transform: scale(1.3); }
+    }
+
+    /* ── VOICE INIT BLOCK ── */
+    .voice-init-block {
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: -16px;
+    }
+
+    .voice-init-header {
+      background: rgba(157,143,255,.04);
+      border-bottom: 1px solid var(--border);
+      padding: 9px 18px;
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 4px;
+      color: var(--user);
+      text-transform: uppercase;
+      opacity: 0.7;
+    }
+
+    .voice-choice {
+      padding: 14px 18px 14px 20px;
+      border-left: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .voice-choice + .voice-choice { border-top: 1px solid var(--border); }
+    .voice-choice.claude { border-left-color: var(--claude); }
+    .voice-choice.openai { border-left-color: var(--openai); }
+    .voice-choice.gemini { border-left-color: var(--gemini); }
+
+    .vc-model {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 3px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .vc-model.claude { color: var(--claude); }
+    .vc-model.openai { color: var(--openai); }
+    .vc-model.gemini { color: var(--gemini); }
+
+    .vc-voice-name {
+      font-family: 'Courier Prime', monospace;
+      font-size: 11px;
+      color: var(--text);
+      opacity: 0.6;
+      letter-spacing: 1px;
+    }
+
+    .vc-reason { font-size: 13.5px; line-height: 1.65; color: var(--text); font-style: italic; }
+
+    .vc-loading { display: flex; gap: 5px; align-items: center; }
+    .vc-loading span {
+      width: 3px; height: 3px; border-radius: 50%;
+      background: var(--muted);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .vc-loading span:nth-child(2) { animation-delay: 0.2s; }
+    .vc-loading span:nth-child(3) { animation-delay: 0.4s; }
+
+    /* ── INPUT BAR ── */
+    #input-bar {
+      padding: 16px 28px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+
+    #input-wrap { display: flex; gap: 10px; align-items: flex-end; }
+
+    #prompt {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-family: 'Lora', Georgia, serif;
+      font-size: 14px;
+      line-height: 1.6;
+      outline: none;
+      resize: none;
+      max-height: 140px;
+      overflow-y: auto;
+      transition: border-color 0.15s;
+    }
+
+    #prompt::placeholder { color: var(--muted); }
+    #prompt:focus { border-color: var(--muted); }
+
+    #send-btn {
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 12px 18px;
+      border: 1px solid var(--muted);
+      border-radius: 2px;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      align-self: flex-end;
+    }
+
+    #send-btn:hover:not(:disabled) { background: var(--text); color: var(--bg); border-color: var(--text); }
+    #send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    #input-hint {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      margin-top: 8px;
+      text-align: right;
+    }
+
+    .response-timestamp {
+      font-family: 'Courier Prime', monospace;
+      font-size: 8px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 768px) {
+      body { font-size: 14px; }
+      
+      #header { 
+        padding: 12px 14px 8px; 
+        gap: 6px;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      #logo-block { width: 100%; }
+      #logo-block h1 { font-size: 13px; letter-spacing: 2px; }
+      #logo-block .eyebrow { font-size: 8px; }
+
+      #header-controls {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        padding: 8px 0 0 0;
+        border-top: 1px solid var(--border);
+      }
+
+      #header-controls .divider-btn { display: none; }
+
+      .pill-btn {
+        font-size: 9px;
+        letter-spacing: 0.5px;
+        padding: 8px 6px;
+        text-align: center;
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Config panel — stack vertically, full width */
+      #config-panel { 
+        padding: 12px 14px 14px; 
+        flex-direction: column; 
+        gap: 12px;
+        max-height: 60vh;
+        overflow-y: auto;
+      }
+      
+      .key-row {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+      }
+      
+      .key-label { min-width: auto; }
+      
+      .key-input { 
+        width: 100%; 
+        padding: 10px 12px;
+        font-size: 14px;
+      }
+      
+      .key-toggle-btn {
+        padding: 8px 12px;
+        font-size: 9px;
+      }
+      
+      .keys-note { 
+        margin-left: 0; 
+        font-size: 11px;
+        width: 100%;
+      }
+      
+      #injection-mode-section {
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      #injection-mode-select {
+        width: 100%;
+        font-size: 13px;
+      }
+
+      #thread { 
+        padding: 16px 12px 8px; 
+        gap: 24px;
+      }
+
+      .turn-number { 
+        font-size: 9px;
+        margin-bottom: 10px;
+      }
+
+      .user-msg { 
+        max-width: 85%;
+        font-size: 14px;
+        padding: 10px 12px;
+        align-self: flex-end;
+      }
+
+      .response-card { 
+        padding: 12px 10px 12px 12px;
+        margin-bottom: 12px;
+      }
+      
+      .response-body { 
+        font-size: 13px; 
+        line-height: 1.6;
+      }
+
+      .voice-choice { 
+        padding: 10px 10px 10px 12px; 
+      }
+      
+      .vc-reason { 
+        font-size: 12px;
+      }
+
+      #input-bar { 
+        padding: 10px 12px;
+        position: sticky;
+        bottom: 0;
+      }
+      
+      #input-wrap { 
+        gap: 8px;
+        flex-direction: column;
+      }
+
+      #send-btn { 
+        font-size: 10px; 
+        padding: 12px 14px;
+        min-height: 44px;
+        width: 100%;
+      }
+
+      #prompt { 
+        font-size: 14px; 
+        padding: 12px;
+        min-height: 44px;
+      }
+      
+      #input-hint { 
+        font-size: 10px;
+        margin-top: 6px;
+      }
+
+      .response-header { 
+        flex-wrap: wrap; 
+        gap: 6px;
+        font-size: 11px;
+      }
+      
+      .response-timestamp { 
+        font-size: 8px;
+      }
+      
+      .model-tag {
+        padding: 3px 6px;
+        font-size: 9px;
+      }
+      
+      .blind-tag, .continued-tag {
+        font-size: 8px;
+        padding: 1px 4px;
+      }
+    }
+
+    /* ── BLIND MODE ── */
+    .response-card.blind-hidden .response-body,
+    .response-card.blind-hidden .speak-btn {
+      filter: blur(6px);
+      user-select: none;
+      pointer-events: none;
+      opacity: 0.4;
+    }
+
+    .response-card.blind-hidden .model-tag {
+      opacity: 0.3;
+    }
+
+    .blind-reveal-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 0 2px;
+    }
+
+    .blind-reveal-btn {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border: 1px solid var(--muted);
+      border-radius: 2px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .blind-reveal-btn:hover { border-color: var(--text); color: var(--text); }
+
+    .pill-btn.active-blind { border-color: #e8855a; color: #e8855a; background: rgba(232,133,90,.08); }
+    .pill-btn.active-rounds { border-color: var(--text); color: var(--text); background: rgba(202,197,186,.06); }
+
+    .round-label {
+      font-family: 'Courier Prime', monospace;
+      font-size: 8px;
+      letter-spacing: 3px;
+      color: var(--dim);
+      text-transform: uppercase;
+      padding: 14px 0 6px 20px;
+      border-left: 2px solid var(--border);
+    }
+
+    .round-label:first-child { padding-top: 4px; }
+
+    /* ── PRINT ── */
+    @media print {
+      @page { margin: 1.2cm 1.5cm; size: A4; }
+      html, body { background: #fff !important; color: #111 !important; height: auto !important; }
+      #app { height: auto !important; max-width: 100% !important; }
+      #header-controls, #config-panel, #input-bar, .speak-btn, .blind-reveal-bar { display: none !important; }
+      #header { background: #fff !important; border-bottom: 2px solid #111 !important; padding: 12px 0 10px !important; }
+      #logo-block .eyebrow { color: #888 !important; }
+      #logo-block h1 { color: #111 !important; }
+      #thread { overflow: visible !important; height: auto !important; padding: 20px 0 !important; gap: 28px !important; }
+      .turn { break-inside: avoid; }
+      .user-msg { background: #f5f4ff !important; border-color: #9d8fff !important; color: #222 !important; }
+      .user-label { color: #9d8fff !important; }
+      .response-card { border-left-width: 3px !important; padding: 12px 14px 12px 16px !important; }
+      .response-card + .response-card { border-top: 1px solid #e0e0e0 !important; }
+      .response-card.claude { border-left-color: #c8881a !important; }
+      .response-card.openai { border-left-color: #0a9e5f !important; }
+      .response-card.gemini { border-left-color: #2c6fd4 !important; }
+      .model-tag.claude { color: #c8881a !important; }
+      .model-tag.openai { color: #0a9e5f !important; }
+      .model-tag.gemini { color: #2c6fd4 !important; }
+      .response-body { color: #111 !important; font-size: 13px !important; line-height: 1.65 !important; }
+      .response-timestamp { color: #888 !important; }
+      .turn-number { color: #bbb !important; }
+      .round-label { color: #999 !important; border-left-color: #e0e0e0 !important; }
+      .blind-tag { color: #c05a2a !important; border-color: #c05a2a !important; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <div id="logo-block">
+      <div class="eyebrow">The</div>
+      <h1>Council</h1>
+    </div>
+    <div id="header-controls">
+      <button class="pill-btn" id="config-btn" onclick="toggleConfig()">Config</button>
+      <div class="divider-btn"></div>
+      <button class="pill-btn" id="json-btn" onclick="toggleJSON()">JSON</button>
+      <button class="pill-btn" onclick="exportPDF()">PDF</button>
+      <button class="pill-btn" onclick="clearThread()">Clear</button>
+    </div>
+    <button class="hamburger-btn" id="hamburger-btn" onclick="toggleHamburger()">☰</button>
+    <div id="hamburger-menu" class="hamburger-menu">
+      <button class="pill-btn" id="hamburger-config-btn" onclick="toggleConfig(); closeHamburger()">Config</button>
+      <button class="pill-btn" id="hamburger-json-btn" onclick="toggleJSON(); closeHamburger()">JSON</button>
+      <button class="pill-btn" onclick="exportPDF(); closeHamburger()">PDF</button>
+      <button class="pill-btn" onclick="clearThread(); closeHamburger()">Clear</button>
+      <input type="file" id="import-file-input" accept=".json" onchange="importJSON(event)" style="display:none;" />
+    </div>
+  </div>
+
+  <!-- JSON POPOVER -->
+  <div id="json-popover">
+    <button class="json-popover-btn" onclick="exportJSON()">Export JSON</button>
+    <button class="json-popover-btn" onclick="document.getElementById('import-file-input').click()">Import JSON</button>
+  </div>
+
+  <!-- CONFIG PANEL -->
+  <div id="config-panel">
+    <div style="flex-basis: 100%; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+      <button class="pill-btn" id="voices-btn" onclick="initVoices()" style="padding: 5px 11px;">Voices</button>
+      <button class="pill-btn" id="autoread-btn" onclick="toggleAutoRead()" style="padding: 5px 11px;">Auto-Read</button>
+      <button class="pill-btn" id="stop-read-btn" onclick="stopAutoRead()" style="padding: 5px 11px;">Stop</button>
+      <span class="keys-note" style="margin: 0;">Voice synthesis controls</span>
+    </div>
+    <div style="flex-basis: 100%; border-top: 1px solid var(--border-hi); padding-top: 12px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+      <span class="key-label">Blind Mode</span>
+      <button class="pill-btn" id="config-blind-btn" onclick="toggleBlind()" style="padding: 5px 11px;">Off</button>
+      <span class="keys-note" style="margin: 0;">Hide responses until all models complete</span>
+    </div>
+    <div style="flex-basis: 100%; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+      <span class="key-label">Rounds</span>
+      <button class="pill-btn" id="config-rounds-btn" onclick="cycleRounds()" style="padding: 5px 11px;">1</button>
+      <span class="keys-note" style="margin: 0;">Deliberation rounds per turn</span>
+    </div>
+    <div style="flex-basis: 100%; border-top: 1px solid var(--border-hi); padding-top: 12px; display: flex; align-items: flex-start; gap: 15px; flex-direction: column;">
+      <span class="key-label">Models</span>
+      <div id="model-pills" style="display: flex; flex-wrap: wrap; gap: 8px; width: 100%;"></div>
+      <span class="keys-note" style="margin: 0;">Select which models participate in this council</span>
+    </div>
+    <div id="injection-mode-section" style="flex-basis: 100%; display: flex; align-items: center; gap: 15px;">
+      <span class="key-label">Context</span>
+      <select id="injection-mode-select" onchange="setInjectionMode(this.value)" style="background: var(--surface); border: 1px solid var(--border-hi); border-radius: 2px; padding: 7px 10px; color: var(--text);">
+        <option value="none">None (fresh start)</option>
+        <option value="full">Full (shared minutes)</option>
+        <option value="personal">Personal (your prior statements)</option>
+      </select>
+      <span class="keys-note" style="margin: 0; flex: 1;">How prior sessions inject into current context</span>
+    </div>
+    <div style="flex-basis: 100%; border-top: 1px solid var(--border-hi); padding-top: 12px; display: flex; align-items: flex-start; gap: 15px; flex-direction: column;">
+      <span class="key-label">Keys</span>
+      <div class="key-row">
+        <span class="key-label">Your Name</span>
+        <input class="key-input" id="user-name" type="text" placeholder="How the council should address you" oninput="saveUserName(this.value)" />
+      </div>
+      <div class="key-row">
+        <span class="key-label">Anthropic</span>
+        <input class="key-input" id="key-claude" type="password" placeholder="sk-ant-..." oninput="saveKey('claude', this.value)" />
+        <button class="key-toggle-btn" onclick="toggleKeyVisibility('key-claude')">Show</button>
+      </div>
+      <div class="key-row">
+        <span class="key-label">OpenAI</span>
+        <input class="key-input" id="key-openai" type="password" placeholder="sk-..." oninput="saveKey('openai', this.value)" />
+        <button class="key-toggle-btn" onclick="toggleKeyVisibility('key-openai')">Show</button>
+      </div>
+      <div class="key-row">
+        <span class="key-label">Google</span>
+        <input class="key-input" id="key-gemini" type="password" placeholder="AIza..." oninput="saveKey('gemini', this.value)" />
+        <button class="key-toggle-btn" onclick="toggleKeyVisibility('key-gemini')">Show</button>
+      </div>
+      <span class="keys-note">Stored in localStorage · sent only to each provider's API</span>
+    </div>
+    <div id="custom-models-section">
+      <div id="custom-models-list"></div>
+      <div class="add-model-form">
+        <span class="key-label">Add Model</span>
+        <input class="key-input am-input" id="am-name" type="text" placeholder="Label (e.g. Llama 3.3)" />
+        <input class="key-input am-input wide" id="am-url" type="text" placeholder="Endpoint (e.g. https://openrouter.ai/api/v1/chat/completions)" />
+        <input class="key-input am-input" id="am-model" type="text" placeholder="Model ID (e.g. meta-llama/llama-3.3-70b)" />
+        <input class="key-input am-input" id="am-key" type="password" placeholder="API key" />
+        <input class="am-color" id="am-color" type="color" value="#C05AC0" title="Council color" />
+        <button class="pill-btn" onclick="addCustomModel()">+ Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- THREAD -->
+  <div id="thread">
+    <div class="empty-state">
+      <div class="glyph">◇</div>
+      <p>The Council awaits your first question.</p>
+    </div>
+  </div>
+
+  <!-- INPUT BAR -->
+  <div id="input-bar">
+    <div id="input-wrap">
+      <textarea id="prompt" placeholder="Ask the council..."></textarea>
+      <button id="send-btn" onclick="sendMessage()">Send</button>
+    </div>
+    <div id="input-hint"></div>
+  </div>
+
+</div>
+
+<script src="./council.js"></script>
+</body>
+</html>
