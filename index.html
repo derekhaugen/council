@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
   <title>The Council</title>
   <meta name="description" content="A multi-model AI roundtable. Put one question to Claude, GPT, Gemini — or any model you add — and watch them agree, diverge, and respond to each other. Bring your own API keys." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2309090c'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='%23cac5ba'%3E%E2%97%88%3C/text%3E%3C/svg%3E" />
@@ -250,8 +249,8 @@
     #export-popover {
       display: none;
       position: fixed;
-      top: auto;
-      bottom: 85px;
+      top: 50%;
+      transform: translateY(-50%);
       left: 14px;
       right: 14px;
       background: var(--surface);
@@ -270,6 +269,7 @@
       #export-popover {
         position: absolute;
         top: 65px;
+        transform: none;
         bottom: auto;
         left: auto;
         right: 28px;
@@ -649,7 +649,7 @@
       padding: 12px 14px;
       color: var(--text);
       font-family: 'Lora', Georgia, serif;
-      font-size: 14px;
+      font-size: 16px;
       line-height: 1.6;
       outline: none;
       resize: none;
@@ -994,22 +994,25 @@
     <!-- MODELS -->
     <div style="flex-basis: 100%; border-bottom: 1px solid var(--border-hi); padding-bottom: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 15px; flex-direction: column;">
       <h4 style="font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted-hi); font-weight: 600; margin: 0;">Models</h4>
-      <div id="model-pills" style="display: flex; flex-wrap: wrap; gap: 8px; width: 100%;"></div>
       <span class="keys-note" style="margin: 0;">Select which models participate in this council</span>
+      <div id="model-pills" style="display: flex; flex-wrap: wrap; gap: 8px; width: 100%;"></div>
       
       <!-- ADD MODEL FORM -->
       <div id="custom-models-section" style="width: 100%; margin-top: 8px;">
         <div id="custom-models-list"></div>
-        <div class="add-model-form">
-          <span class="key-label">Add Model</span>
-          <input class="key-input am-input" id="am-name" type="text" placeholder="Label (e.g. Llama 3.3)" />
-          <input class="key-input am-input wide" id="am-url" type="text" placeholder="Endpoint (e.g. https://openrouter.ai/api/v1/chat/completions)" />
-          <input class="key-input am-input" id="am-model" type="text" placeholder="Model ID (e.g. meta-llama/llama-3.3-70b)" />
-          <input class="key-input am-input" id="am-key" type="password" placeholder="API key" />
-          <input class="am-color" id="am-color" type="color" value="#C05AC0" title="Council color" />
-          <button class="pill-btn" onclick="addCustomModel()">+ Add</button>
-        </div>
-        <span class="keys-note">For OpenRouter, Groq, Together, Mistral: find the endpoint in their API docs (usually `https://api.[provider]/v1/chat/completions`). Model ID is listed in their model catalog. For local Ollama: endpoint is `http://localhost:11434/v1/chat/completions` and model names are what you've `ollama pull`'d. All must support OpenAI-compatible API format and CORS.</span>
+        <details style="width: 100%;">
+          <summary style="cursor: pointer; font-size: 11px; color: var(--muted-hi); margin-bottom: 8px; user-select: none;">Add Custom Model</summary>
+          <div class="add-model-form">
+            <span class="key-label">Add Model</span>
+            <input class="key-input am-input" id="am-name" type="text" placeholder="Label (e.g. Llama 3.3)" />
+            <input class="key-input am-input wide" id="am-url" type="text" placeholder="Endpoint (e.g. https://openrouter.ai/api/v1/chat/completions)" />
+            <input class="key-input am-input" id="am-model" type="text" placeholder="Model ID (e.g. meta-llama/llama-3.3-70b)" />
+            <input class="key-input am-input" id="am-key" type="password" placeholder="API key" />
+            <input class="am-color" id="am-color" type="color" value="#C05AC0" title="Council color" />
+            <button class="pill-btn" onclick="addCustomModel()">+ Add</button>
+          </div>
+          <span class="keys-note">For OpenRouter, Groq, Together, Mistral: find the endpoint in their API docs (usually `https://api.[provider]/v1/chat/completions`). Model ID is listed in their model catalog. For local Ollama: endpoint is `http://localhost:11434/v1/chat/completions` and model names are what you've `ollama pull`'d. All must support OpenAI-compatible API format and CORS.</span>
+        </details>
       </div>
     </div>
 
