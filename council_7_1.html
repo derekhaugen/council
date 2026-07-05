@@ -1,0 +1,2291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Council</title>
+  <meta name="description" content="A multi-model AI roundtable. Put one question to Claude, GPT, Gemini — or any model you add — and watch them agree, diverge, and respond to each other. Bring your own API keys." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2309090c'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='%23cac5ba'%3E%E2%97%88%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #09090c;
+      --surface:  #0f1014;
+      --border:   #1e2028;
+      --muted:    #6b6f7e;
+      --muted-hi: #979cae;  /* readable secondary text — task surfaces, not chrome */
+      --border-hi:#3a3e4e;  /* visible boundaries for inputs and controls */
+      --text:     #cac5ba;
+      --dim:      #666070;
+      --claude:   #E8A838;
+      --openai:   #19C37D;
+      --gemini:   #5B8DEF;
+      --user:     #9d8fff;
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Lora', Georgia, serif; }
+
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    /* ── HEADER ── */
+    #header {
+      padding: 18px 28px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    #logo-block .eyebrow {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 4px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    #logo-block h1 {
+      font-family: 'Courier Prime', monospace;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    #header-controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .hamburger-btn {
+      background: none;
+      border: 1px solid var(--border-hi);
+      color: var(--text);
+      font-size: 20px;
+      padding: 6px 12px;
+      cursor: pointer;
+      border-radius: 2px;
+      display: none;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .hamburger-menu {
+      position: fixed;
+      top: 0;
+      right: -300px;
+      width: 280px;
+      height: 100vh;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      padding: 80px 14px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: right 0.3s ease;
+      z-index: 200;
+      overflow-y: auto;
+    }
+
+    .hamburger-menu.open {
+      right: 0;
+    }
+
+    .hamburger-menu .pill-btn {
+      width: 100%;
+      text-align: left;
+      justify-content: flex-start;
+    }
+
+    @media (max-width: 768px) {
+      .hamburger-btn { display: block; }
+      #header-controls { display: none !important; }
+      .divider-btn { display: none !important; }
+    }
+
+    #export-json-btn, #import-json-btn {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 5px 11px;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    #export-json-btn:hover, #import-json-btn:hover {
+      border-color: var(--muted);
+      color: var(--text);
+    }
+
+    #import-file-input {
+      display: none;
+    }
+
+    .pill-btn {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 5px 11px;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .pill-btn:hover { border-color: var(--muted); color: var(--text); }
+    .pill-btn.active-claude { border-color: var(--claude); color: var(--claude); background: rgba(232,168,56,.08); }
+    .pill-btn.active-openai { border-color: var(--openai); color: var(--openai); background: rgba(25,195,125,.08); }
+    .pill-btn.active-gemini { border-color: var(--gemini); color: var(--gemini); background: rgba(91,141,239,.08); }
+    .response-body.stopped { color: var(--muted); font-style: italic; }
+    #stop-btn {
+      display: none;
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 12px 18px;
+      border: 1px solid #e8855a;
+      border-radius: 2px;
+      background: rgba(232,133,90,.08);
+      color: #e8855a;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      align-self: flex-end;
+    }
+    #stop-btn.visible { display: inline-block; }
+    #stop-btn:hover { background: rgba(232,133,90,.18); }
+    .interjection {
+      align-self: flex-end;
+      max-width: 70%;
+      margin: 6px 0 10px auto;
+      padding: 8px 12px;
+      border: 1px solid var(--user);
+      border-radius: 3px;
+      background: rgba(157,143,255,.06);
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
+    .interjection .ij-label {
+      font-family: 'Courier Prime', monospace;
+      font-size: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--user);
+      margin-bottom: 4px;
+    }
+    .pill-btn.active-keys { border-color: var(--muted-hi); color: var(--text); background: rgba(151,156,174,.08); }
+    .pill-btn.pill-add {
+      border-style: dashed;
+      border-color: var(--border-hi);
+      color: var(--muted-hi);
+      min-width: 28px;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+    .pill-btn.pill-add:hover { border-color: var(--text); color: var(--text); }
+    .pill-btn.active-voice  { border-color: var(--user); color: var(--user); background: rgba(157,143,255,.08); }
+
+    .divider-btn {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+      margin: 0 2px;
+    }
+
+    /* ── KEYS PANEL ── */
+    #config-panel {
+      display: none;
+      background: #0c0d11;
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    #config-panel.open { display: flex; }
+
+    #json-popover {
+      display: none;
+      position: fixed;
+      top: auto;
+      bottom: 85px;
+      left: 14px;
+      right: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-radius: 3px;
+      padding: 12px;
+      gap: 8px;
+      flex-direction: column;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    #json-popover.open { display: flex; }
+    
+    @media (min-width: 769px) {
+      #json-popover {
+        position: absolute;
+        top: 65px;
+        bottom: auto;
+        left: auto;
+        right: 28px;
+        min-width: 160px;
+      }
+    }
+
+    .json-popover-btn {
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 8px 12px;
+      border: 1px solid var(--border-hi);
+      background: transparent;
+      color: var(--muted-hi);
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.15s;
+    }
+
+    .json-popover-btn:hover {
+      border-color: var(--text);
+      color: var(--text);
+      background: rgba(202,197,186,.06);
+    }
+
+    .key-row { display: flex; align-items: center; gap: 10px; }
+
+    .key-label {
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      color: var(--muted-hi);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .key-input {
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-radius: 2px;
+      padding: 7px 10px;
+      color: var(--text);
+      font-family: 'Courier Prime', monospace;
+      font-size: 12.5px;
+      flex: 1;
+      min-width: 200px;
+      max-width: 400px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .key-input::placeholder { color: #5d6274; }
+
+    .key-input:focus { border-color: var(--muted-hi); }
+
+    .key-toggle-btn {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 5px 10px;
+      border: 1px solid var(--border-hi);
+      background: transparent;
+      color: var(--muted-hi);
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.15s;
+    }
+
+    .key-toggle-btn:hover {
+      border-color: var(--text);
+      color: var(--text);
+    }
+
+    #custom-models-section {
+      flex-basis: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border-top: 1px solid var(--border-hi);
+      padding-top: 12px;
+    }
+    .add-model-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .am-input { width: 170px; }
+    .am-input.wide { width: 320px; }
+    .am-color {
+      width: 30px; height: 30px; padding: 2px;
+      background: var(--surface); border: 1px solid var(--border-hi);
+      border-radius: 2px; cursor: pointer;
+    }
+    .custom-model-row {
+      display: flex; align-items: center; gap: 10px;
+      font-family: 'Courier Prime', monospace; font-size: 12px;
+    }
+    .custom-model-row .cm-swatch {
+      width: 10px; height: 10px; border-radius: 2px; display: inline-block;
+    }
+    .custom-model-row .cm-detail { color: var(--muted-hi); font-size: 11px; }
+    .cm-remove {
+      background: none; border: 1px solid var(--border-hi); border-radius: 2px;
+      color: var(--muted-hi); font-size: 11px; padding: 2px 8px; cursor: pointer;
+    }
+    .cm-remove:hover { border-color: #e8855a; color: #e8855a; }
+
+    .keys-note {
+      font-family: 'Courier Prime', monospace;
+      font-size: 10.5px;
+      color: var(--muted-hi);
+      letter-spacing: 0.5px;
+      line-height: 1.6;
+      margin-left: auto;
+    }
+
+    /* ── THREAD ── */
+    #thread {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px 28px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .empty-state { margin: auto; text-align: center; }
+
+    .empty-state .glyph {
+      font-family: 'Courier Prime', monospace;
+      font-size: 48px;
+      color: var(--border);
+      margin-bottom: 16px;
+    }
+
+    .empty-state p {
+      font-family: 'Courier Prime', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* ── TURN ── */
+    .turn { display: flex; flex-direction: column; gap: 0; }
+
+    .turn-number {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .blind-tag {
+      color: #e8855a;
+      border: 1px solid rgba(232,133,90,.35);
+      border-radius: 2px;
+      padding: 1px 6px;
+      margin-left: 8px;
+      letter-spacing: 2px;
+    }
+
+    .continued-tag {
+      color: #979cae;
+      border: 1px solid rgba(151,156,174,.35);
+      border-radius: 2px;
+      padding: 1px 6px;
+      margin-left: 8px;
+      letter-spacing: 2px;
+      font-weight: 400;
+    }
+
+    .user-msg {
+      align-self: flex-end;
+      max-width: 72%;
+      background: rgba(157,143,255,.07);
+      border: 1px solid rgba(157,143,255,.2);
+      border-radius: 2px 2px 0 2px;
+      padding: 12px 16px;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #d4d0f8;
+    }
+
+    .user-label {
+      font-family: 'Courier Prime', monospace;
+      font-size: 8px;
+      letter-spacing: 3px;
+      color: rgba(157,143,255,.5);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .responses { display: flex; flex-direction: column; gap: 0; margin-top: 2px; }
+
+    .response-card {
+      border-left: 2px solid var(--border);
+      padding: 16px 18px 16px 20px;
+      position: relative;
+      transition: background 0.3s;
+    }
+
+    .response-card + .response-card { border-top: 1px solid var(--border); }
+    .response-card.claude { border-left-color: var(--claude); }
+    .response-card.openai { border-left-color: var(--openai); }
+    .response-card.gemini { border-left-color: var(--gemini); }
+
+    /* Speaking state */
+    .response-card.speaking { background: rgba(255,255,255,.015); }
+    .response-card.speaking .model-tag { animation: speaking-pulse 1.2s ease-in-out infinite; }
+
+    @keyframes speaking-pulse {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+
+    .response-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .model-tag {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .model-tag.claude { color: var(--claude); }
+    .model-tag.openai { color: var(--openai); }
+    .model-tag.gemini { color: var(--gemini); }
+
+    .speak-btn {
+      background: none;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-family: 'Courier Prime', monospace;
+      font-size: 8px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      padding: 2px 6px;
+      border-radius: 2px;
+      transition: all 0.15s;
+      opacity: 0.5;
+    }
+
+    .speak-btn:hover { opacity: 1; border-color: var(--muted); color: var(--text); }
+
+    .response-body { font-size: 14.5px; line-height: 1.75; color: var(--text); }
+    .response-body.error { font-family: 'Courier Prime', monospace; font-size: 12px; color: #c0505a; }
+
+    .thinking { display: flex; gap: 5px; align-items: center; padding: 4px 0; }
+    .thinking span {
+      width: 4px; height: 4px; border-radius: 50%;
+      background: var(--muted);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .thinking span:nth-child(2) { animation-delay: 0.2s; }
+    .thinking span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse {
+      0%, 60%, 100% { opacity: 0.2; transform: scale(1); }
+      30% { opacity: 1; transform: scale(1.3); }
+    }
+
+    /* ── VOICE INIT BLOCK ── */
+    .voice-init-block {
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: -16px;
+    }
+
+    .voice-init-header {
+      background: rgba(157,143,255,.04);
+      border-bottom: 1px solid var(--border);
+      padding: 9px 18px;
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 4px;
+      color: var(--user);
+      text-transform: uppercase;
+      opacity: 0.7;
+    }
+
+    .voice-choice {
+      padding: 14px 18px 14px 20px;
+      border-left: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .voice-choice + .voice-choice { border-top: 1px solid var(--border); }
+    .voice-choice.claude { border-left-color: var(--claude); }
+    .voice-choice.openai { border-left-color: var(--openai); }
+    .voice-choice.gemini { border-left-color: var(--gemini); }
+
+    .vc-model {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 3px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .vc-model.claude { color: var(--claude); }
+    .vc-model.openai { color: var(--openai); }
+    .vc-model.gemini { color: var(--gemini); }
+
+    .vc-voice-name {
+      font-family: 'Courier Prime', monospace;
+      font-size: 11px;
+      color: var(--text);
+      opacity: 0.6;
+      letter-spacing: 1px;
+    }
+
+    .vc-reason { font-size: 13.5px; line-height: 1.65; color: var(--text); font-style: italic; }
+
+    .vc-loading { display: flex; gap: 5px; align-items: center; }
+    .vc-loading span {
+      width: 3px; height: 3px; border-radius: 50%;
+      background: var(--muted);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .vc-loading span:nth-child(2) { animation-delay: 0.2s; }
+    .vc-loading span:nth-child(3) { animation-delay: 0.4s; }
+
+    /* ── INPUT BAR ── */
+    #input-bar {
+      padding: 16px 28px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+
+    #input-wrap { display: flex; gap: 10px; align-items: flex-end; }
+
+    #prompt {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-family: 'Lora', Georgia, serif;
+      font-size: 14px;
+      line-height: 1.6;
+      outline: none;
+      resize: none;
+      max-height: 140px;
+      overflow-y: auto;
+      transition: border-color 0.15s;
+    }
+
+    #prompt::placeholder { color: var(--muted); }
+    #prompt:focus { border-color: var(--muted); }
+
+    #send-btn {
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 12px 18px;
+      border: 1px solid var(--muted);
+      border-radius: 2px;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      align-self: flex-end;
+    }
+
+    #send-btn:hover:not(:disabled) { background: var(--text); color: var(--bg); border-color: var(--text); }
+    #send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    #input-hint {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      margin-top: 8px;
+      text-align: right;
+    }
+
+    .response-timestamp {
+      font-family: 'Courier Prime', monospace;
+      font-size: 8px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 768px) {
+      body { font-size: 14px; }
+      
+      #header { 
+        padding: 12px 14px 8px; 
+        gap: 6px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      
+      #logo-block { width: auto; }
+      #logo-block h1 { font-size: 13px; letter-spacing: 2px; }
+      #logo-block .eyebrow { font-size: 8px; }
+
+      #header-controls {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        padding: 8px 0 0 0;
+        border-top: 1px solid var(--border);
+      }
+
+      #header-controls .divider-btn { display: none; }
+
+      .pill-btn {
+        font-size: 9px;
+        letter-spacing: 0.5px;
+        padding: 8px 6px;
+        text-align: center;
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Config panel — stack vertically, full width */
+      #config-panel { 
+        padding: 12px 14px 14px; 
+        flex-direction: column; 
+        flex-wrap: nowrap;
+        gap: 12px;
+        max-height: 60vh;
+        overflow-y: auto;
+        width: 100%;
+      }
+      
+      .key-row {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+      }
+      
+      .key-label { min-width: auto; }
+      
+      .key-input { 
+        width: 100%; 
+        padding: 10px 12px;
+        font-size: 14px;
+      }
+      
+      .key-toggle-btn {
+        padding: 8px 12px;
+        font-size: 9px;
+      }
+      
+      .keys-note { 
+        margin-left: 0; 
+        font-size: 11px;
+        width: 100%;
+      }
+      
+      #injection-mode-section {
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      #injection-mode-select {
+        width: 100%;
+        font-size: 13px;
+      }
+
+      #thread { 
+        padding: 16px 12px 8px; 
+        gap: 24px;
+      }
+
+      .turn-number { 
+        font-size: 9px;
+        margin-bottom: 10px;
+      }
+
+      .user-msg { 
+        max-width: 85%;
+        font-size: 14px;
+        padding: 10px 12px;
+        align-self: flex-end;
+      }
+
+      .response-card { 
+        padding: 12px 10px 12px 12px;
+        margin-bottom: 12px;
+      }
+      
+      .response-body { 
+        font-size: 13px; 
+        line-height: 1.6;
+      }
+
+      .voice-choice { 
+        padding: 10px 10px 10px 12px; 
+      }
+      
+      .vc-reason { 
+        font-size: 12px;
+      }
+
+      #input-bar { 
+        padding: 10px 12px;
+        position: sticky;
+        bottom: 0;
+      }
+      
+      #input-wrap { 
+        gap: 8px;
+        flex-direction: column;
+        width: 100%;
+      }
+
+      #send-btn { 
+        font-size: 10px; 
+        padding: 12px 14px;
+        min-height: 44px;
+        width: 100%;
+      }
+
+      #prompt { 
+        font-size: 14px; 
+        padding: 12px;
+        min-height: 44px;
+        width: 100%;
+      }
+      
+      #input-hint { 
+        font-size: 10px;
+        margin-top: 6px;
+      }
+
+      .response-header { 
+        flex-wrap: wrap; 
+        gap: 6px;
+        font-size: 11px;
+      }
+      
+      .response-timestamp { 
+        font-size: 8px;
+      }
+      
+      .model-tag {
+        padding: 3px 6px;
+        font-size: 9px;
+      }
+      
+      .blind-tag, .continued-tag {
+        font-size: 8px;
+        padding: 1px 4px;
+      }
+    }
+
+    /* ── BLIND MODE ── */
+    .response-card.blind-hidden .response-body,
+    .response-card.blind-hidden .speak-btn {
+      filter: blur(6px);
+      user-select: none;
+      pointer-events: none;
+      opacity: 0.4;
+    }
+
+    .response-card.blind-hidden .model-tag {
+      opacity: 0.3;
+    }
+
+    .blind-reveal-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 0 2px;
+    }
+
+    .blind-reveal-btn {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border: 1px solid var(--muted);
+      border-radius: 2px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .blind-reveal-btn:hover { border-color: var(--text); color: var(--text); }
+
+    .pill-btn.active-blind { border-color: #e8855a; color: #e8855a; background: rgba(232,133,90,.08); }
+    .pill-btn.active-rounds { border-color: var(--text); color: var(--text); background: rgba(202,197,186,.06); }
+
+    .round-label {
+      font-family: 'Courier Prime', monospace;
+      font-size: 8px;
+      letter-spacing: 3px;
+      color: var(--dim);
+      text-transform: uppercase;
+      padding: 14px 0 6px 20px;
+      border-left: 2px solid var(--border);
+    }
+
+    .round-label:first-child { padding-top: 4px; }
+
+    /* ── PRINT ── */
+    @media print {
+      @page { margin: 1.2cm 1.5cm; size: A4; }
+      html, body { background: #fff !important; color: #111 !important; height: auto !important; }
+      #app { height: auto !important; max-width: 100% !important; }
+      #header-controls, #config-panel, #input-bar, .speak-btn, .blind-reveal-bar { display: none !important; }
+      #header { background: #fff !important; border-bottom: 2px solid #111 !important; padding: 12px 0 10px !important; }
+      #logo-block .eyebrow { color: #888 !important; }
+      #logo-block h1 { color: #111 !important; }
+      #thread { overflow: visible !important; height: auto !important; padding: 20px 0 !important; gap: 28px !important; }
+      .turn { break-inside: avoid; }
+      .user-msg { background: #f5f4ff !important; border-color: #9d8fff !important; color: #222 !important; }
+      .user-label { color: #9d8fff !important; }
+      .response-card { border-left-width: 3px !important; padding: 12px 14px 12px 16px !important; }
+      .response-card + .response-card { border-top: 1px solid #e0e0e0 !important; }
+      .response-card.claude { border-left-color: #c8881a !important; }
+      .response-card.openai { border-left-color: #0a9e5f !important; }
+      .response-card.gemini { border-left-color: #2c6fd4 !important; }
+      .model-tag.claude { color: #c8881a !important; }
+      .model-tag.openai { color: #0a9e5f !important; }
+      .model-tag.gemini { color: #2c6fd4 !important; }
+      .response-body { color: #111 !important; font-size: 13px !important; line-height: 1.65 !important; }
+      .response-timestamp { color: #888 !important; }
+      .turn-number { color: #bbb !important; }
+      .round-label { color: #999 !important; border-left-color: #e0e0e0 !important; }
+      .blind-tag { color: #c05a2a !important; border-color: #c05a2a !important; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <div id="logo-block">
+      <div class="eyebrow">The</div>
+      <h1>Council</h1>
+    </div>
+    <div id="header-controls">
+      <button class="pill-btn" id="config-btn" onclick="toggleConfig()">Config</button>
+      <div class="divider-btn"></div>
+      <button class="pill-btn" id="json-btn" onclick="toggleJSON()">JSON</button>
+      <button class="pill-btn" onclick="exportPDF()">PDF</button>
+      <button class="pill-btn" onclick="clearThread()">Clear</button>
+    </div>
+    <button class="hamburger-btn" id="hamburger-btn" onclick="toggleHamburger()">☰</button>
+    <div id="hamburger-menu" class="hamburger-menu">
+      <button class="pill-btn" id="hamburger-config-btn" onclick="toggleConfig(); closeHamburger()">Config</button>
+      <button class="pill-btn" id="hamburger-json-btn" onclick="toggleJSON(); closeHamburger()">JSON</button>
+      <button class="pill-btn" onclick="exportPDF(); closeHamburger()">PDF</button>
+      <button class="pill-btn" onclick="clearThread(); closeHamburger()">Clear</button>
+      <input type="file" id="import-file-input" accept=".json" onchange="importJSON(event)" style="display:none;" />
+    </div>
+  </div>
+
+  <!-- JSON POPOVER -->
+  <div id="json-popover">
+    <button class="json-popover-btn" onclick="exportJSON()">Export JSON</button>
+    <button class="json-popover-btn" onclick="document.getElementById('import-file-input').click()">Import JSON</button>
+  </div>
+
+  <!-- CONFIG PANEL -->
+  <div id="config-panel">
+    <div style="flex-basis: 100%; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+      <button class="pill-btn" id="voices-btn" onclick="initVoices()" style="padding: 5px 11px;">Voices</button>
+      <button class="pill-btn" id="autoread-btn" onclick="toggleAutoRead()" style="padding: 5px 11px;">Auto-Read</button>
+      <button class="pill-btn" id="stop-read-btn" onclick="stopAutoRead()" style="padding: 5px 11px;">Stop</button>
+      <span class="keys-note" style="margin: 0;">Voice synthesis controls</span>
+    </div>
+    <div style="flex-basis: 100%; border-top: 1px solid var(--border-hi); padding-top: 12px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+      <span class="key-label">Blind Mode</span>
+      <button class="pill-btn" id="config-blind-btn" onclick="toggleBlind()" style="padding: 5px 11px;">Off</button>
+      <span class="keys-note" style="margin: 0;">Hide responses until all models complete</span>
+    </div>
+    <div style="flex-basis: 100%; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+      <span class="key-label">Rounds</span>
+      <button class="pill-btn" id="config-rounds-btn" onclick="cycleRounds()" style="padding: 5px 11px;">1</button>
+      <span class="keys-note" style="margin: 0;">Deliberation rounds per turn</span>
+    </div>
+    <div style="flex-basis: 100%; border-top: 1px solid var(--border-hi); padding-top: 12px; display: flex; align-items: flex-start; gap: 15px; flex-direction: column;">
+      <span class="key-label">Models</span>
+      <div id="model-pills" style="display: flex; flex-wrap: wrap; gap: 8px; width: 100%;"></div>
+      <span class="keys-note" style="margin: 0;">Select which models participate in this council</span>
+    </div>
+    <div id="injection-mode-section" style="flex-basis: 100%; display: flex; align-items: center; gap: 15px;">
+      <span class="key-label">Context</span>
+      <select id="injection-mode-select" onchange="setInjectionMode(this.value)" style="background: var(--surface); border: 1px solid var(--border-hi); border-radius: 2px; padding: 7px 10px; color: var(--text); font-family: 'Courier Prime', monospace; font-size: 12.5px; outline: none;">
+        <option value="none">None (fresh start)</option>
+        <option value="full">Full (shared minutes)</option>
+        <option value="personal">Personal (your prior statements)</option>
+      </select>
+      <span class="keys-note" style="margin: 0; flex: 1;">How prior sessions inject into current context</span>
+    </div>
+    <div style="flex-basis: 100%; border-top: 1px solid var(--border-hi); padding-top: 12px; display: flex; align-items: flex-start; gap: 15px; flex-direction: column;">
+      <span class="key-label">Keys</span>
+      <div class="key-row">
+        <span class="key-label">Your Name</span>
+        <input class="key-input" id="user-name" type="text" placeholder="How the council should address you" oninput="saveUserName(this.value)" />
+      </div>
+      <div class="key-row">
+        <span class="key-label">Anthropic</span>
+        <input class="key-input" id="key-claude" type="password" placeholder="sk-ant-..." oninput="saveKey('claude', this.value)" />
+        <button class="key-toggle-btn" onclick="toggleKeyVisibility('key-claude')">Show</button>
+      </div>
+      <div class="key-row">
+        <span class="key-label">OpenAI</span>
+        <input class="key-input" id="key-openai" type="password" placeholder="sk-..." oninput="saveKey('openai', this.value)" />
+        <button class="key-toggle-btn" onclick="toggleKeyVisibility('key-openai')">Show</button>
+      </div>
+      <div class="key-row">
+        <span class="key-label">Google</span>
+        <input class="key-input" id="key-gemini" type="password" placeholder="AIza..." oninput="saveKey('gemini', this.value)" />
+        <button class="key-toggle-btn" onclick="toggleKeyVisibility('key-gemini')">Show</button>
+      </div>
+      <span class="keys-note">Stored in localStorage · sent only to each provider's API</span>
+    </div>
+    <div id="custom-models-section">
+      <div id="custom-models-list"></div>
+      <div class="add-model-form">
+        <span class="key-label">Add Model</span>
+        <input class="key-input am-input" id="am-name" type="text" placeholder="Label (e.g. Llama 3.3)" />
+        <input class="key-input am-input wide" id="am-url" type="text" placeholder="Endpoint (e.g. https://openrouter.ai/api/v1/chat/completions)" />
+        <input class="key-input am-input" id="am-model" type="text" placeholder="Model ID (e.g. meta-llama/llama-3.3-70b)" />
+        <input class="key-input am-input" id="am-key" type="password" placeholder="API key" />
+        <input class="am-color" id="am-color" type="color" value="#C05AC0" title="Council color" />
+        <button class="pill-btn" onclick="addCustomModel()">+ Add</button>
+      </div>
+      <span class="keys-note">For OpenRouter, Groq, Together, Mistral: find the endpoint in their API docs (usually `https://api.[provider]/v1/chat/completions`). Model ID is listed in their model catalog. For local Ollama: endpoint is `http://localhost:11434/v1/chat/completions` and model names are what you've `ollama pull`'d. All must support OpenAI-compatible API format and CORS.</span>
+    </div>
+  </div>
+
+  <!-- THREAD -->
+  <div id="thread">
+    <div class="empty-state" id="empty">
+      <div class="glyph">◈</div>
+      <p>Convene the council</p>
+    </div>
+  </div>
+
+  <!-- INPUT -->
+  <div id="input-bar">
+    <div id="input-wrap">
+      <textarea id="prompt" rows="2" placeholder="Put something to the council…" onkeydown="handleKey(event)"></textarea>
+      <button id="send-btn" onclick="submit()">Send</button>
+      <button id="stop-btn" onclick="requestStop()" title="Stop the council (Esc)">Stop</button>
+    </div>
+    <div id="input-hint">↵ send &nbsp;·&nbsp; shift+↵ newline</div>
+  </div>
+
+</div>
+
+<script>
+  const COUNCIL_SYSTEM_BASE = "You are one voice in a multi-AI council alongside other AI models. In each round you can see what the other council members said in the previous round. Engage with their perspectives directly — agree, push back, build on them, or offer a different angle. Be direct and substantive. Be yourself. A human convener moderates this council. The convener's most recent message is the current directive: address it first, before continuing any prior discussion. If it changes the subject, asks a question, or requests something outside the deliberation, respond to that — do not steamroll it with the previous topic. If the convener asks for something you cannot actually do (live data, tool calls, the current time), say so plainly rather than improvising an answer.";
+
+  // The human has a name too. When set, it joins the system prompt so
+  // council members stop addressing their convener as "human".
+  function councilSystem() {
+    return userName
+      ? COUNCIL_SYSTEM_BASE + ` The human convening this council is named ${userName}. Address them by name, not as "human" or "user".`
+      : COUNCIL_SYSTEM_BASE;
+  }
+
+  const VOICE_SYSTEM = "You are choosing a spoken voice to represent you in a live AI council discussion.";
+
+  // ── Model registry ──────────────────────────────────────────────────────────
+  // Built-in members. provider selects the call path; custom models are always
+  // 'openai-compatible' since nearly every provider outside Anthropic and
+  // Google speaks that dialect.
+  const MODEL_META = {
+    claude: { label: "Claude Sonnet 4.6", cls: "claude", model: "claude-sonnet-4-6", provider: "anthropic", color: "#E8A838" },
+    openai: { label: "GPT-4o", cls: "openai", model: "gpt-4o", provider: "openai-compatible",
+              baseUrl: "https://api.openai.com/v1/chat/completions", color: "#19C37D" },
+    gemini: { label: "Gemini", cls: "gemini", model: "gemini-2.5-flash", provider: "gemini", color: "#5B8DEF" },
+  };
+  const BUILTIN_IDS = Object.keys(MODEL_META);
+
+  // Custom models added by the user — persisted separately from keys.
+  let customModels = {};
+  try { customModels = JSON.parse(localStorage.getItem("council_custom_models") || "{}"); } catch (e) { customModels = {}; }
+
+  let modelColors = {};
+  try { modelColors = JSON.parse(localStorage.getItem("council_model_colors") || "{}"); } catch (e) { modelColors = {}; }
+
+  function getMeta(id) { return MODEL_META[id] || customModels[id]; }
+  function allModelIds() { return [...BUILTIN_IDS, ...Object.keys(customModels)]; }
+
+  function saveCustomModels() {
+    localStorage.setItem("council_custom_models", JSON.stringify(customModels));
+  }
+
+  function hexToRgba(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+
+  // Shared response budget — identical cap for all members so no model
+  // gets more room to speak than another.
+  const MAX_TOKENS = 1024;
+
+  let activeModels = new Set(["claude", "openai", "gemini"]);
+  let thread = [];
+  let isLoading = false;
+  let stopRequested = false; // convener pressed Stop
+  let abortCtrl = null;      // aborts the in-flight API call
+  let rotationOffset = 0; // increments each round to rotate speaking order
+  let blindMode = false;  // when true, responses hidden until all complete
+  let roundsPerTurn = 1;  // deliberation rounds per question (1–3)
+  let injectionMode = "none"; // "none", "full", or "personal" — how prior sessions are injected
+  let sessionLoaded = false; // track if current session was loaded from JSON
+
+  function cycleRounds() {
+    roundsPerTurn = (roundsPerTurn % 3) + 1;
+    
+    // Update config panel button
+    const configBtn = document.getElementById('config-rounds-btn');
+    if (configBtn) configBtn.textContent = roundsPerTurn;
+  }
+
+  function setInjectionMode(mode) {
+    injectionMode = mode;
+    localStorage.setItem('injectionMode', mode);
+    updateInjectionButton();
+  }
+
+  function cycleContextMode() {
+    const modes = ["none", "full", "personal"];
+    const currentIndex = modes.indexOf(injectionMode);
+    const nextIndex = (currentIndex + 1) % modes.length;
+    injectionMode = modes[nextIndex];
+    localStorage.setItem('injectionMode', injectionMode);
+    updateContextButton();
+    
+    // Also sync the selector in KEYS panel if it exists
+    const selector = document.getElementById('injection-mode-select');
+    if (selector) selector.value = injectionMode;
+  }
+
+  function updateContextButton() {
+    // Context mode is now only in config panel, no header button to update
+    // This function kept for backwards compatibility but does nothing now
+  }
+
+  // ── Voice state ─────────────────────────────────────────────────────────────
+  let autoRead = false;
+  let modelVoices = {}; // modelId → SpeechSynthesisVoice, populated dynamically
+  let voicesInitialized = false;
+  let speakQueue = [];
+  let isSpeaking = false;
+  let currentSpeakingCard = null;
+
+
+  // Voices load async in browsers
+  function getEnglishVoices() {
+    return speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+  }
+
+  if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = () => {
+      // Attempt to restore saved voice prefs now that voices are loaded
+      restoreSavedVoices();
+    };
+  }
+
+  function restoreSavedVoices() {
+    const saved = localStorage.getItem('council_voices');
+    if (!saved) return;
+    try {
+      const prefs = JSON.parse(saved);
+      const voices = speechSynthesis.getVoices();
+      let restored = 0;
+      Object.entries(prefs).forEach(([modelId, voiceName]) => {
+        const voice = voices.find(v => v.name === voiceName);
+        if (voice) { modelVoices[modelId] = voice; restored++; }
+      });
+      if (restored > 0) {
+        voicesInitialized = true;
+        document.getElementById('voices-btn').className = 'pill-btn active-voice';
+      }
+    } catch(e) {}
+  }
+
+  // ── Convener ────────────────────────────────────────────────────────────────
+  let userName = localStorage.getItem("council_user_name") || "";
+
+  function saveUserName(val) {
+    userName = val.trim();
+    localStorage.setItem("council_user_name", userName);
+    renderThread(); // relabel existing turns immediately
+  }
+
+  // ── Keys ────────────────────────────────────────────────────────────────────
+  const keys = { claude: "", openai: "", gemini: "" };
+
+  function loadKeys() {
+    allModelIds().forEach(id => {
+      const v = localStorage.getItem(`council_key_${id}`) || "";
+      keys[id] = v;
+      const el = document.getElementById(`key-${id}`);
+      if (el && v) el.value = v;
+    });
+    const nameEl = document.getElementById("user-name");
+    if (nameEl && userName) nameEl.value = userName;
+    
+    // Load and sync blind mode (check if button exists first)
+    const blindBtn = document.getElementById("config-blind-btn");
+    if (blindBtn) blindBtn.textContent = blindMode ? "On" : "Off";
+    
+    // Load and sync rounds (check if button exists first)
+    const roundsBtn = document.getElementById("config-rounds-btn");
+    if (roundsBtn) roundsBtn.textContent = roundsPerTurn;
+    
+    // Load injection mode
+    injectionMode = localStorage.getItem('injectionMode') || "none";
+    const selector = document.getElementById('injection-mode-select');
+    if (selector) selector.value = injectionMode;
+    updateContextButton();
+    
+    renderModelPills();
+    renderCustomModelList();
+    setTimeout(restoreSavedVoices, 600);
+  }
+
+  function saveKey(id, val) {
+    keys[id] = val;
+    localStorage.setItem(`council_key_${id}`, val);
+  }
+
+  function toggleKeyVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    const btn = event.target;
+    if (input.type === "password") {
+      input.type = "text";
+      btn.textContent = "Hide";
+    } else {
+      input.type = "password";
+      btn.textContent = "Show";
+    }
+  }
+
+  function toggleHamburger() {
+    const menu = document.getElementById('hamburger-menu');
+    menu.classList.toggle('open');
+  }
+
+  function closeHamburger() {
+    const menu = document.getElementById('hamburger-menu');
+    menu.classList.remove('open');
+  }
+
+  function toggleConfig() {
+    const open = document.getElementById("config-panel").classList.toggle("open");
+    document.getElementById("config-btn").className = open ? "pill-btn active-keys" : "pill-btn";
+  }
+
+  function toggleJSON() {
+    const popover = document.getElementById("json-popover");
+    const open = popover.classList.toggle("open");
+    document.getElementById("json-btn").className = open ? "pill-btn active-keys" : "pill-btn";
+    
+    // Close popover if clicking elsewhere
+    if (open) {
+      document.addEventListener("click", closeJSONPopover);
+    }
+  }
+
+  function closeJSONPopover(e) {
+    const popover = document.getElementById("json-popover");
+    const btn = document.getElementById("json-btn");
+    if (!popover.contains(e.target) && !btn.contains(e.target)) {
+      popover.classList.remove("open");
+      btn.className = "pill-btn";
+      document.removeEventListener("click", closeJSONPopover);
+    }
+  }
+
+  // ── Custom models: add / remove / render ────────────────────────────────────
+  function addCustomModel() {
+    const name  = document.getElementById("am-name").value.trim();
+    const url   = document.getElementById("am-url").value.trim();
+    const model = document.getElementById("am-model").value.trim();
+    const key   = document.getElementById("am-key").value.trim();
+    const color = document.getElementById("am-color").value;
+    if (!name || !url || !model) { alert("Label, endpoint, and model ID are required."); return; }
+    if (!/^https?:\/\//.test(url)) { alert("Endpoint must be a full URL (https://…)."); return; }
+
+    const id = "custom_" + Date.now();
+    customModels[id] = { label: name, cls: "custom", model, provider: "openai-compatible", baseUrl: url, color };
+    saveCustomModels();
+    keys[id] = key;
+    localStorage.setItem(`council_key_${id}`, key);
+    modelVoices[id] = null;
+    activeModels.add(id);
+
+    ["am-name", "am-url", "am-model", "am-key"].forEach(x => document.getElementById(x).value = "");
+    renderModelPills();
+    renderCustomModelList();
+  }
+
+  function removeCustomModel(id) {
+    const meta = customModels[id];
+    if (!meta) return;
+    if (!confirm(`Remove ${meta.label} from the council?`)) return;
+    delete customModels[id];
+    saveCustomModels();
+    delete keys[id];
+    localStorage.removeItem(`council_key_${id}`);
+    activeModels.delete(id);
+    if (activeModels.size === 0) activeModels.add("claude");
+    renderModelPills();
+    renderCustomModelList();
+  }
+
+  function renderCustomModelList() {
+    const list = document.getElementById("custom-models-list");
+    if (!list) return;
+    list.innerHTML = "";
+    Object.entries(customModels).forEach(([id, m]) => {
+      const row = document.createElement("div");
+      row.className = "custom-model-row";
+      row.innerHTML = `
+        <span class="cm-swatch" style="background:${m.color}"></span>
+        <span style="color:${m.color}">${escHtml(m.label)}</span>
+        <span class="cm-detail">${escHtml(m.model)} · ${escHtml(m.baseUrl)}</span>
+        <button class="cm-remove" onclick="removeCustomModel('${id}')">remove</button>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  function applyPillState(btn, id, active) {
+    if (BUILTIN_IDS.includes(id)) {
+      btn.className = active ? `pill-btn active-${id}` : "pill-btn";
+      return;
+    }
+    const meta = getMeta(id);
+    btn.className = "pill-btn";
+    if (active && meta) {
+      btn.style.borderColor = meta.color;
+      btn.style.color = meta.color;
+      btn.style.background = hexToRgba(meta.color, 0.08);
+    } else {
+      btn.style.borderColor = "";
+      btn.style.color = "";
+      btn.style.background = "";
+    }
+  }
+
+  function renderModelPills() {
+    const wrap = document.getElementById("model-pills");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    allModelIds().forEach(id => {
+      const meta = getMeta(id);
+      const btn = document.createElement("button");
+      btn.dataset.model = id;
+      btn.textContent = meta.label;
+      btn.onclick = () => toggleModel(btn);
+      applyPillState(btn, id, activeModels.has(id));
+      wrap.appendChild(btn);
+    });
+    // Roster grows where the roster lives: + sits with the models, not
+    // buried under "Keys".
+    const add = document.createElement("button");
+    add.className = "pill-btn pill-add";
+    add.textContent = "+";
+    add.title = "Add a model to the council";
+    add.onclick = openAddModel;
+    wrap.appendChild(add);
+  }
+
+  function openAddModel() {
+    const panel = document.getElementById("keys-panel");
+    if (!panel.classList.contains("open")) {
+      panel.classList.add("open");
+      document.getElementById("keys-btn").className = "pill-btn active-keys";
+    }
+    const nameField = document.getElementById("am-name");
+    if (nameField) {
+      nameField.focus();
+      nameField.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+
+  // ── Model toggles ───────────────────────────────────────────────────────────
+  function toggleModel(btn) {
+    const id = btn.dataset.model;
+    if (activeModels.has(id) && activeModels.size > 1) {
+      activeModels.delete(id);
+      applyPillState(btn, id, false);
+    } else {
+      activeModels.add(id);
+      applyPillState(btn, id, true);
+    }
+  }
+
+  // ── Blind mode ──────────────────────────────────────────────────────────────
+  function toggleBlind() {
+    blindMode = !blindMode;
+    
+    // Update config panel button
+    const configBtn = document.getElementById('config-blind-btn');
+    if (configBtn) configBtn.textContent = blindMode ? "On" : "Off";
+  }
+
+  function revealTurn(turnIndex) {
+    const container = document.getElementById(`responses-${turnIndex}`);
+    if (!container) return;
+    const turn = thread[turnIndex];
+    if (turn) turn.revealed = true;
+    container.querySelectorAll('.blind-hidden').forEach(el => el.classList.remove('blind-hidden'));
+    const bar = container.querySelector('.blind-reveal-bar');
+    if (bar) bar.remove();
+    // If auto-read is on, queue responses round by round, in speaking order
+    if (autoRead && turn) {
+      (turn.rounds || []).forEach((round, rIdx) => {
+        const ordered = round.order || [...activeModels];
+        ordered.forEach(modelId => {
+          const r = round.responses?.[modelId];
+          if (r && !r.loading && !r.error && r.text) {
+            enqueueSpeak(r.text, modelId, `card-${turnIndex}-${rIdx}-${modelId}`);
+          }
+        });
+      });
+    }
+  }
+
+  // ── API calls ───────────────────────────────────────────────────────────────
+
+  // Truncation is data. A response cut off by the token cap should be visibly
+  // distinct from one the model chose to end — otherwise the instrument
+  // records an artifact of the budget as if it were the model's behavior.
+  function markTruncation(text, wasTruncated) {
+    return wasTruncated ? text + "\n\n[— truncated at token cap —]" : text;
+  }
+
+  // Uniform response handling: surface the provider's message on HTTP errors
+  // instead of crashing on non-JSON bodies (e.g. 529 overload pages).
+  async function parseApiResponse(res) {
+    if (!res.ok) {
+      let msg = `${res.status} ${res.statusText}`;
+      try {
+        const d = await res.json();
+        msg = d.error?.message || (typeof d.error === "string" ? d.error : msg);
+      } catch (e) { /* non-JSON error body — keep status text */ }
+      throw new Error(msg);
+    }
+    return res.json();
+  }
+
+  async function callClaude(messages, systemOverride) {
+    if (!keys.claude) throw new Error("Anthropic key not set — open Config panel");
+    const system = systemOverride !== undefined ? systemOverride : councilSystem();
+    const body = { model: MODEL_META.claude.model, max_tokens: MAX_TOKENS, messages };
+    if (system) body.system = system;
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+        "x-api-key": keys.claude
+      },
+      body: JSON.stringify(body),
+      signal: abortCtrl?.signal
+    });
+    const data = await parseApiResponse(res);
+    const text = data.content?.[0]?.text || "(no response)";
+    return markTruncation(text, data.stop_reason === "max_tokens");
+  }
+
+  // Any OpenAI-compatible endpoint: OpenAI itself, OpenRouter, Groq, Together,
+  // Mistral, xAI, local Ollama/LM Studio — same request shape, different URL.
+  async function callOpenAICompatible(modelId, messages, systemOverride) {
+    const meta = getMeta(modelId);
+    if (!keys[modelId] && !meta.baseUrl.includes("localhost") && !meta.baseUrl.includes("127.0.0.1"))
+      throw new Error(`${meta.label} key not set — open Config panel`);
+    const system = systemOverride !== undefined ? systemOverride : councilSystem();
+    const sysMsg = system ? [{ role: "system", content: system }] : [];
+    const headers = { "Content-Type": "application/json" };
+    if (keys[modelId]) headers["Authorization"] = `Bearer ${keys[modelId]}`;
+    const res = await fetch(meta.baseUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ model: meta.model, max_tokens: MAX_TOKENS, messages: [...sysMsg, ...messages] }),
+      signal: abortCtrl?.signal
+    });
+    const data = await parseApiResponse(res);
+    const text = data.choices?.[0]?.message?.content || "(no response)";
+    return markTruncation(text, data.choices?.[0]?.finish_reason === "length");
+  }
+
+  async function callGemini(messages, systemOverride) {
+    if (!keys.gemini) throw new Error("Gemini key not set — open Config panel");
+    const system = systemOverride !== undefined ? systemOverride : councilSystem();
+    const contents = messages.map(m => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }]
+    }));
+    // gemini-2.5-flash is a thinking model: thinking tokens count against
+    // maxOutputTokens, silently starving the visible reply. thinkingBudget: 0
+    // disables thinking so the cap means the same thing it does for the others.
+    const body = { contents, generationConfig: { maxOutputTokens: MAX_TOKENS, thinkingConfig: { thinkingBudget: 0 } } };
+    if (system) body.systemInstruction = { parts: [{ text: system }] };
+    // Key travels in a header, not the URL — query-string keys leak into
+    // logs, history, and referrers.
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_META.gemini.model}:generateContent`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": keys.gemini },
+        body: JSON.stringify(body),
+        signal: abortCtrl?.signal
+      }
+    );
+    const data = await parseApiResponse(res);
+    const cand = data.candidates?.[0];
+    // Join every text part — thinking models can return multiple parts, and
+    // reading only parts[0] silently drops the tail.
+    const text = (cand?.content?.parts || [])
+      .map(p => p.text || "")
+      .join("") || "(no response)";
+    return markTruncation(text, cand?.finishReason === "MAX_TOKENS");
+  }
+
+  async function callModel(modelId, messages, systemOverride) {
+    const meta = getMeta(modelId);
+    if (!meta) throw new Error(`Unknown model: ${modelId}`);
+    if (meta.provider === "anthropic") return callClaude(messages, systemOverride);
+    if (meta.provider === "gemini") return callGemini(messages, systemOverride);
+    return callOpenAICompatible(modelId, messages, systemOverride);
+  }
+
+  // ── Voice initialization ────────────────────────────────────────────────────
+  async function initVoices() {
+    // Wait for voices to be available
+    let voices = getEnglishVoices();
+    if (voices.length === 0) {
+      await new Promise(r => setTimeout(r, 800));
+      voices = getEnglishVoices();
+    }
+    if (voices.length === 0) {
+      alert("No text-to-speech voices found. Chrome is recommended for best voice support.");
+      return;
+    }
+
+    // Build a voice list string (cap at 24 voices for readability)
+    const subset = voices.slice(0, Math.min(24, voices.length));
+    const voiceListStr = subset.map((v, i) => `${i}: ${v.name}`).join('\n');
+
+    const voicePrompt = `You are joining the Council — a live roundtable where AI models discuss ideas aloud with a human. You will speak your responses in the voice you choose now.
+
+Available text-to-speech voices:
+${voiceListStr}
+
+Choose the voice that feels most authentically like you — consider your character, your tone, how you communicate.
+
+Reply ONLY with valid JSON, no markdown:
+{"index": N, "reason": "one sentence — why this voice suits you"}`;
+
+    // Render init block
+    showVoiceInitBlock();
+
+    const modelsToInit = [...activeModels].filter(id => {
+      if (id === 'claude') return true;
+      const m = getMeta(id);
+      // Local endpoints (Ollama, LM Studio) don't need a key
+      if (m?.baseUrl && (m.baseUrl.includes('localhost') || m.baseUrl.includes('127.0.0.1'))) return true;
+      return !!keys[id];
+    });
+
+    const savedPrefs = {};
+    const chosenVoiceNames = []; // track picks so each model avoids duplicates
+
+    for (const modelId of modelsToInit) {
+      setVoiceChoiceState(modelId, 'loading', null, null);
+
+      const takenNote = chosenVoiceNames.length > 0
+        ? `\n\nIMPORTANT: The following voices have already been chosen by other council members — you MUST pick a different one:\n${chosenVoiceNames.join(', ')}`
+        : '';
+
+      const prompt = voicePrompt + takenNote;
+
+      try {
+        const raw = await callModel(modelId, [{ role: 'user', content: prompt }], VOICE_SYSTEM);
+        const clean = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+        const parsed = JSON.parse(clean);
+        let idx = Math.max(0, Math.min(parseInt(parsed.index) || 0, subset.length - 1));
+        let voice = subset[idx];
+        // If model still picked a taken voice, find the next available one
+        if (chosenVoiceNames.includes(voice.name)) {
+          voice = subset.find(v => !chosenVoiceNames.includes(v.name)) || voice;
+        }
+        modelVoices[modelId] = voice;
+        savedPrefs[modelId] = voice.name;
+        chosenVoiceNames.push(voice.name);
+        setVoiceChoiceState(modelId, 'done', voice.name, parsed.reason || '');
+      } catch(e) {
+        // Fallback: pick first available unchosen voice
+        const fallbackIdxs = { claude: 0, openai: 2, gemini: 4 };
+        let voice = subset.find((v, i) => i >= (fallbackIdxs[modelId] || 0) && !chosenVoiceNames.includes(v.name))
+                 || subset.find(v => !chosenVoiceNames.includes(v.name))
+                 || subset[0];
+        modelVoices[modelId] = voice;
+        savedPrefs[modelId] = voice.name;
+        chosenVoiceNames.push(voice.name);
+        setVoiceChoiceState(modelId, 'done', voice.name, `(auto-assigned)`);
+      }
+    }
+
+    localStorage.setItem('council_voices', JSON.stringify(savedPrefs));
+    voicesInitialized = true;
+    document.getElementById('voices-btn').className = 'pill-btn active-voice';
+
+    // Enable auto-read
+    if (!autoRead) toggleAutoRead();
+  }
+
+  function showVoiceInitBlock() {
+    const container = document.getElementById("thread");
+    document.getElementById("empty").style.display = "none";
+
+    let block = document.getElementById('voice-init-block');
+    if (block) block.remove();
+
+    block = document.createElement('div');
+    block.id = 'voice-init-block';
+    block.className = 'voice-init-block';
+    block.innerHTML = `<div class="voice-init-header">◈ Voice Selection</div><div id="vc-list"></div>`;
+
+    const firstTurn = container.querySelector('.turn');
+    if (firstTurn) container.insertBefore(block, firstTurn);
+    else container.appendChild(block);
+
+    [...activeModels].forEach(modelId => {
+      const meta = getMeta(modelId);
+      if (!meta) return;
+      const div = document.createElement('div');
+      div.className = `voice-choice ${meta.cls}`;
+      div.id = `vc-${modelId}`;
+      if (meta.cls === 'custom') div.style.borderLeftColor = meta.color;
+      div.innerHTML = `<div class="vc-model ${meta.cls}"${vcTagStyle(meta)}>${meta.label}</div>`;
+      document.getElementById('vc-list').appendChild(div);
+    });
+
+    container.scrollTop = 0;
+  }
+
+  function vcTagStyle(meta) {
+    return meta.cls === 'custom' ? ` style="color:${meta.color}"` : '';
+  }
+
+  function setVoiceChoiceState(modelId, state, voiceName, reason) {
+    const el = document.getElementById(`vc-${modelId}`);
+    if (!el) return;
+    const meta = getMeta(modelId);
+    if (!meta) return;
+    if (state === 'loading') {
+      el.innerHTML = `
+        <div class="vc-model ${meta.cls}"${vcTagStyle(meta)}>${meta.label}</div>
+        <div class="vc-loading"><span></span><span></span><span></span></div>
+      `;
+    } else {
+      el.innerHTML = `
+        <div class="vc-model ${meta.cls}"${vcTagStyle(meta)}>${meta.label}</div>
+        <div class="vc-voice-name">▸ ${escHtml(voiceName)}</div>
+        <div class="vc-reason">"${escHtml(reason)}"</div>
+      `;
+    }
+  }
+
+  // ── Auto-read toggle ────────────────────────────────────────────────────────
+  function toggleAutoRead() {
+    autoRead = !autoRead;
+    const btn = document.getElementById('autoread-btn');
+    btn.className = autoRead ? 'pill-btn active-voice' : 'pill-btn';
+    btn.textContent = autoRead ? 'Auto-Read ◉' : 'Auto-Read';
+    if (!autoRead) {
+      speechSynthesis.cancel();
+      speakQueue = [];
+      isSpeaking = false;
+      if (currentSpeakingCard) {
+        currentSpeakingCard.classList.remove('speaking');
+        currentSpeakingCard = null;
+      }
+    }
+  }
+
+  function stopAutoRead() {
+    speechSynthesis.cancel();
+    speakQueue = [];
+    isSpeaking = false;
+    if (currentSpeakingCard) {
+      currentSpeakingCard.classList.remove('speaking');
+      currentSpeakingCard = null;
+    }
+  }
+
+  // ── Speech synthesis ────────────────────────────────────────────────────────
+
+  // Chrome bug: speechSynthesis silently pauses on longer utterances.
+  // Periodic pause+resume keeps it alive.
+  let synthKeepAlive = null;
+
+  function startKeepAlive() {
+    if (synthKeepAlive) return;
+    synthKeepAlive = setInterval(() => {
+      if (speechSynthesis.speaking && !speechSynthesis.paused) {
+        speechSynthesis.pause();
+        speechSynthesis.resume();
+      }
+    }, 10000);
+  }
+
+  function stopKeepAlive() {
+    if (synthKeepAlive) { clearInterval(synthKeepAlive); synthKeepAlive = null; }
+  }
+
+  function stripForSpeech(text) {
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/#{1,6}\s/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/\n{2,}/g, '. ')
+      .replace(/\n/g, ' ')
+      .trim();
+  }
+
+  function enqueueSpeak(text, modelId, cardId) {
+    speakQueue.push({ text, modelId, cardId });
+    if (!isSpeaking) processQueue();
+  }
+
+  function processQueue() {
+    if (speakQueue.length === 0) {
+      isSpeaking = false;
+      stopKeepAlive();
+      return;
+    }
+
+    const { text, modelId, cardId } = speakQueue.shift();
+    const voice = modelVoices[modelId];
+
+    if (currentSpeakingCard) { currentSpeakingCard.classList.remove('speaking'); currentSpeakingCard = null; }
+
+    const card = document.getElementById(cardId);
+    if (card) { card.classList.add('speaking'); currentSpeakingCard = card; }
+
+    const utt = new SpeechSynthesisUtterance(stripForSpeech(text));
+    if (voice) utt.voice = voice;
+    utt.rate = 0.93;
+
+    // Safety timeout in case onend never fires (Chrome bug)
+    const wordCount = text.split(/\s+/).length;
+    const estMs = (wordCount / 2.5) * 1000 + 4000;
+    const safetyTimer = setTimeout(finish, estMs);
+
+    function finish() {
+      clearTimeout(safetyTimer);
+      if (card) card.classList.remove('speaking');
+      if (currentSpeakingCard === card) currentSpeakingCard = null;
+      isSpeaking = false;
+      processQueue();
+    }
+
+    utt.onend = finish;
+    utt.onerror = finish;
+
+    isSpeaking = true;
+    startKeepAlive();
+    speechSynthesis.speak(utt);
+  }
+
+  // Immediate playback — interrupts queue
+  function speakNow(turnIndex, roundIdx, modelId) {
+    const r = thread[turnIndex]?.rounds?.[roundIdx]?.responses?.[modelId];
+    if (!r || !r.text) return;
+    const cardId = `card-${turnIndex}-${roundIdx}-${modelId}`;
+
+    speechSynthesis.cancel();
+    speakQueue = [];
+    isSpeaking = false;
+    if (currentSpeakingCard) { currentSpeakingCard.classList.remove('speaking'); currentSpeakingCard = null; }
+
+    enqueueSpeak(r.text, modelId, cardId);
+  }
+
+  // ── Thread history builder ──────────────────────────────────────────────────
+  // priorInTurn: responses already collected this round (from models who spoke earlier)
+  function buildHistory(modelId, priorInTurn = {}) {
+    const hist = [];
+    
+    // Inject prior session context at the start if this is the first turn
+    if (thread.length > 0 && thread[0].continued && injectionMode !== "none") {
+      if (injectionMode === "full") {
+        // Full prior transcript as a bounded block
+        let priorTranscript = "[Previous council session, for continuity:\n\n";
+        // If there's actual prior data, include it. For now, we note it as available.
+        // In a full implementation, this would store the prior thread separately.
+        priorTranscript += "— full session context would be inserted here —\n\n]";
+        hist.push({ role: "system", content: priorTranscript });
+      } else if (injectionMode === "personal") {
+        // Each model gets only its own prior statements
+        let personalContext = "[Your prior statements from the previous council session, for continuity:\n\n";
+        personalContext += "— your statement context would be inserted here —\n\n]";
+        hist.push({ role: "system", content: personalContext });
+      }
+    }
+    
+    for (let i = 0; i < thread.length; i++) {
+      const turn = thread[i];
+      
+      // Skip import notes — they're metadata, not actual turns
+      if (turn.type === "import-note") continue;
+      
+      let userContent = turn.userMsg;
+      // Inject the FINAL round of the previous turn
+      if (i > 0) {
+        const prevRounds = thread[i - 1].rounds || [];
+        const prev = prevRounds[prevRounds.length - 1];
+        let others = Object.entries(prev?.responses || {})
+          .filter(([id, r]) => id !== modelId && r && r.text)
+          .map(([id, r]) => (getMeta(id)?.label || id) + ": " + r.text)
+          .join("\n\n---\n\n");
+        if (prev?.interjection) others += "\n\n---\n\nThe convener had interjected before that round: " + prev.interjection;
+        if (others) userContent = "[What the other council members said last round:\n\n" + others + "]\n\nThe convener now says:\n" + turn.userMsg;
+      }
+      hist.push({ role: "user", content: userContent });
+      (turn.rounds || []).forEach((round, rIdx) => {
+        // Deliberation bridge: rounds after the first open with what the others said
+        if (rIdx > 0) {
+          const prevRound = turn.rounds[rIdx - 1];
+          let others = Object.entries(prevRound.responses || {})
+            .filter(([id, resp]) => id !== modelId && resp && resp.text)
+            .map(([id, resp]) => (getMeta(id)?.label || id) + ": " + resp.text)
+            .join("\n\n---\n\n");
+          if (prevRound.interjection) others += "\n\n---\n\nThe convener had interjected before that round: " + prevRound.interjection;
+          hist.push({
+            role: "user",
+            content: "[Deliberation continues on the same question. What the other council members said:\n\n"
+              + (others || "(no other responses this round)")
+              + "]\n\nRespond to their points directly — agree, challenge, or build on them. Don't merely restate your previous answer."
+          });
+        }
+        const r = round.responses?.[modelId];
+        if (r && r.text) hist.push({ role: "assistant", content: r.text });
+      });
+    }
+    // Inject same-round prior responses so this model reacts in real time
+    const priorEntries = Object.entries(priorInTurn).filter(([id, t]) => id !== modelId && t);
+    if (priorEntries.length > 0) {
+      const priorStr = priorEntries.map(([id, t]) => (getMeta(id)?.label || id) + ": " + t).join("\n\n---\n\n");
+      // Append context to the last user message
+      if (hist.length > 0 && hist[hist.length - 1].role === "user") {
+        hist[hist.length - 1].content += "\n\n[Council members who have already responded this round:\n\n" + priorStr + "\n\nNow respond to the convener's message above. Engage with the other members' points where relevant, but the convener's request comes first — including when the others have ignored it.]";
+      }
+    }
+    return hist;
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+  function renderThread() {
+    const container = document.getElementById("thread");
+    document.getElementById("empty").style.display = thread.length ? "none" : "block";
+    container.querySelectorAll(".turn").forEach(el => el.remove());
+    thread.forEach((turn, i) => {
+      // Skip rendering import notes — they're metadata, not turns
+      if (turn.type === "import-note") return;
+      
+      const div = document.createElement("div");
+      div.className = "turn";
+      div.dataset.index = i;
+      div.innerHTML = `
+        <div class="turn-number">Turn ${i + 1}${turn.blind ? ' <span class="blind-tag">◍ blind</span>' : ''}${turn.continued ? ' <span class="continued-tag">◍ continued</span>' : ''}</div>
+        <div class="user-msg"><div class="user-label">${escHtml(userName || "You")}</div>${escHtml(turn.userMsg)}</div>
+        <div class="responses" id="responses-${i}"></div>
+      `;
+      container.appendChild(div);
+      renderResponses(i, turn);
+    });
+    
+    // Render import note at the top if present
+    const importNote = thread.find(t => t.type === "import-note");
+    if (importNote) {
+      const noteDiv = document.createElement("div");
+      noteDiv.style.cssText = "padding: 14px 20px; margin-bottom: 20px; background: rgba(151,156,174,.08); border-left: 3px solid var(--muted-hi); font-family: 'Courier Prime', monospace; font-size: 11px; color: var(--muted-hi);";
+      const exportDate = new Date(importNote.exportDate).toLocaleString([], {dateStyle: 'short', timeStyle: 'short'});
+      noteDiv.innerHTML = `◍ Imported previous session (exported ${exportDate}) · Injection mode: <strong>${importNote.injectionMode}</strong>`;
+      container.insertBefore(noteDiv, container.firstChild);
+    }
+    
+    requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
+  }
+
+  function makeSpeakBtn(turnIndex, roundIdx, modelId) {
+    return `<button class="speak-btn" onclick="speakNow(${turnIndex},${roundIdx},'${modelId}')" title="Read aloud">▶ play</button>`;
+  }
+
+  function turnComplete(turn) {
+    const planned = turn.roundsPlanned || (turn.rounds || []).length || 1;
+    if ((turn.rounds || []).length < planned) return false;
+    return turn.rounds.every(round =>
+      (round.order || Object.keys(round.responses || {})).every(id => !round.responses?.[id]?.loading)
+    );
+  }
+
+  function renderResponses(index, turn) {
+    const container = document.getElementById(`responses-${index}`);
+    if (!container) return;
+    container.innerHTML = "";
+    (turn.rounds || []).forEach((round, rIdx) => appendRoundDom(container, index, turn, rIdx));
+    // Re-attach the reveal bar for finished blind turns (renderThread wipes it)
+    if (turn.blind && !turn.revealed && turnComplete(turn)) appendRevealBar(container, index);
+  }
+
+  function appendRoundDom(container, turnIndex, turn, roundIdx) {
+    const round = turn.rounds[roundIdx];
+    if (!round) return;
+    const hidden = turn.blind && !turn.revealed;
+    const multiRound = (turn.roundsPlanned || turn.rounds.length) > 1;
+    if (round.interjection) container.appendChild(interjectionBubble(round.interjection));
+    if (multiRound) {
+      const lbl = document.createElement('div');
+      lbl.className = 'round-label';
+      lbl.textContent = `Round ${roundIdx + 1}`;
+      container.appendChild(lbl);
+    }
+    (round.order || [...activeModels]).forEach(modelId => {
+      const r = round.responses?.[modelId];
+      if (!r) return;
+      const meta = getMeta(modelId);
+      if (!meta) return;
+      const card = document.createElement("div");
+      card.className = `response-card ${meta.cls}${hidden ? ' blind-hidden' : ''}`;
+      card.id = `card-${turnIndex}-${roundIdx}-${modelId}`;
+      // Custom models carry their color inline; built-ins use their CSS classes.
+      const isCustom = meta.cls === "custom";
+      if (isCustom) card.style.borderLeftColor = meta.color;
+      const tagStyle = isCustom ? ` style="color:${meta.color}"` : "";
+      const speakBtn = (!r.loading && !r.error && r.text) ? makeSpeakBtn(turnIndex, roundIdx, modelId) : '';
+      const ts = r.timestamp ? `<span class="response-timestamp">${r.timestamp}</span>` : '';
+      let bodyHtml;
+      if (r.loading) bodyHtml = `<div class="thinking"><span></span><span></span><span></span></div>`;
+      else if (r.stopped) bodyHtml = `<div class="response-body stopped">— stopped by convener —</div>`;
+      else if (r.error) bodyHtml = `<div class="response-body error">⚠ ${escHtml(r.error)}</div>`;
+      else bodyHtml = `<div class="response-body">${formatText(r.text)}</div>`;
+      card.innerHTML = `
+        <div class="response-header">
+          <span class="model-tag ${meta.cls}"${tagStyle}>${meta.label}</span>
+          ${speakBtn}${ts}
+        </div>
+        ${bodyHtml}
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  function appendRevealBar(container, turnIndex) {
+    if (container.querySelector('.blind-reveal-bar')) return;
+    const bar = document.createElement('div');
+    bar.className = 'blind-reveal-bar';
+    bar.innerHTML = `<button class="blind-reveal-btn" onclick="revealTurn(${turnIndex})">Reveal responses</button>`;
+    container.appendChild(bar);
+  }
+
+  function updateCard(index, roundIdx, modelId, update) {
+    const turn = thread[index];
+    const round = turn?.rounds?.[roundIdx];
+    if (!round) return;
+    round.responses[modelId] = { ...round.responses[modelId], ...update };
+    const card = document.getElementById(`card-${index}-${roundIdx}-${modelId}`);
+    if (!card) return;
+    const r = round.responses[modelId];
+    const header = card.querySelector('.response-header');
+    if (!r.loading && r.timestamp && header && !header.querySelector('.response-timestamp')) {
+      if (!r.error && r.text) header.insertAdjacentHTML('beforeend', makeSpeakBtn(index, roundIdx, modelId));
+      header.insertAdjacentHTML('beforeend', `<span class="response-timestamp">${r.timestamp}</span>`);
+    }
+    let bodyHtml;
+    if (r.loading) bodyHtml = `<div class="thinking"><span></span><span></span><span></span></div>`;
+    else if (r.stopped) bodyHtml = `<div class="response-body stopped">— stopped by convener —</div>`;
+    else if (r.error) bodyHtml = `<div class="response-body error">⚠ ${escHtml(r.error)}</div>`;
+    else bodyHtml = `<div class="response-body">${formatText(r.text)}</div>`;
+    const existing = card.querySelector(".thinking, .response-body");
+    if (existing) existing.outerHTML = bodyHtml;
+    else card.insertAdjacentHTML("beforeend", bodyHtml);
+    // Auto-read when response completes (suppressed for blind turns — reveal triggers it)
+    if (!r.loading && !r.error && r.text && autoRead && !(turn.blind && !turn.revealed)) {
+      enqueueSpeak(r.text, modelId, `card-${index}-${roundIdx}-${modelId}`);
+    }
+  }
+
+  // ── Stop ────────────────────────────────────────────────────────────────────
+  function requestStop() {
+    if (!isLoading) return;
+    stopRequested = true;
+    if (abortCtrl) abortCtrl.abort();
+  }
+
+  function setRunning(running) {
+    document.getElementById("stop-btn").className = running ? "visible" : "";
+  }
+
+  // Interjections queued mid-deliberation. Delivered at the next round
+  // boundary, to every speaker equally — mid-round delivery would split a
+  // round into before/after and break within-round comparability.
+  let interjectQueue = [];
+
+  function flashHint(msg) {
+    const hint = document.getElementById("input-hint");
+    const orig = hint.innerHTML;
+    hint.textContent = msg;
+    setTimeout(() => { hint.innerHTML = orig; }, 2500);
+  }
+
+  function interjectionBubble(text) {
+    const div = document.createElement("div");
+    div.className = "interjection";
+    div.innerHTML = `<div class="ij-label">${escHtml(userName || "Convener")} interjects</div>${escHtml(text)}`;
+    return div;
+  }
+
+
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && isLoading) requestStop();
+  });
+
+  document.addEventListener("click", e => {
+    const menu = document.getElementById('hamburger-menu');
+    const hamburger = document.getElementById('hamburger-btn');
+    if (menu.classList.contains('open') && !menu.contains(e.target) && !hamburger.contains(e.target)) {
+      closeHamburger();
+    }
+  });
+
+  // ── Submit ──────────────────────────────────────────────────────────────────
+  async function submit() {
+    const textarea = document.getElementById("prompt");
+    const userMsg = textarea.value.trim();
+    if (!userMsg) return;
+    if (isLoading) {
+      // Mid-deliberation: queue as an interjection for the next speaker
+      interjectQueue.push(userMsg);
+      textarea.value = "";
+      autoResize(textarea);
+      flashHint("interjection queued — delivered when the next round begins");
+      return;
+    }
+    textarea.value = "";
+    autoResize(textarea);
+    isLoading = true;
+    stopRequested = false;
+    abortCtrl = new AbortController();
+    setRunning(true);
+
+    const turnIndex = thread.length;
+    // Blind state and round count are captured on the turn itself, so toggling
+    // header buttons mid-round can't change the rules of a round in progress.
+    const turn = { userMsg, rounds: [], blind: blindMode, revealed: false, roundsPlanned: roundsPerTurn };
+    
+    // Mark as continued if this is the first turn after loading a previous session
+    if (sessionLoaded && turnIndex === 0) {
+      turn.continued = true;
+      sessionLoaded = false; // only mark the first turn after import
+    }
+    
+    thread.push(turn);
+
+    for (let roundIdx = 0; roundIdx < turn.roundsPlanned; roundIdx++) {
+      // Rotate speaking order each round
+      const modelArray = [...activeModels];
+      const orderedModels = [
+        ...modelArray.slice(rotationOffset % modelArray.length),
+        ...modelArray.slice(0, rotationOffset % modelArray.length)
+      ];
+      rotationOffset++;
+
+      const responses = {};
+      orderedModels.forEach(id => { responses[id] = { loading: true, text: null, error: null, order: orderedModels.indexOf(id) + 1 }; });
+      // Interjections queued during the previous round land here — one shared
+      // fact for every speaker of this round.
+      const interjection = interjectQueue.length ? interjectQueue.splice(0).join("\n\n") : null;
+      turn.rounds.push({ responses, order: orderedModels, interjection });
+
+      // First round builds the whole turn; later rounds append in place
+      if (roundIdx === 0) renderThread();
+      else appendRoundDom(document.getElementById(`responses-${turnIndex}`), turnIndex, turn, roundIdx);
+
+      // Sequential: each model sees the responses of those before it (unless blind).
+      // Blind applies within a round only — across rounds, members always see
+      // the previous round; that's what makes it deliberation.
+      const priorInTurn = {};
+      for (const modelId of orderedModels) {
+        const stamp = () => new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+        if (stopRequested) {
+          updateCard(turnIndex, roundIdx, modelId, { loading: false, stopped: true, timestamp: stamp() });
+          continue;
+        }
+        // buildHistory already includes the current turn's user message and
+        // deliberation bridges — do not append anything again.
+        const history = buildHistory(modelId, turn.blind ? {} : priorInTurn);
+        const rndIj = turn.rounds[roundIdx].interjection;
+        if (rndIj && history.length && history[history.length - 1].role === "user") {
+          history[history.length - 1].content += "\n\n[The convener interjects:\n" + rndIj + "\nAddress this before anything else this round.]";
+        }
+        try {
+          const text = await callModel(modelId, history);
+          priorInTurn[modelId] = text;
+          updateCard(turnIndex, roundIdx, modelId, { loading: false, text, timestamp: stamp() });
+        } catch (e) {
+          priorInTurn[modelId] = null;
+          // An aborted fetch is the convener stopping, not a provider error
+          if (stopRequested) updateCard(turnIndex, roundIdx, modelId, { loading: false, stopped: true, timestamp: stamp() });
+          else updateCard(turnIndex, roundIdx, modelId, { loading: false, error: e.message, timestamp: stamp() });
+        }
+        document.getElementById("thread").scrollTop = document.getElementById("thread").scrollHeight;
+      }
+      if (stopRequested) break; // no further rounds
+    }
+
+    // Blind turn complete: cards have been hidden since creation — offer the reveal
+    if (turn.blind) {
+      const container = document.getElementById(`responses-${turnIndex}`);
+      if (container) appendRevealBar(container, turnIndex);
+    }
+
+    isLoading = false;
+    abortCtrl = null;
+    setRunning(false);
+    // Interjections queued after the final speaker: hand back to the convener
+    // as a drafted next message — auto-send only if they didn't just hit Stop.
+    const leftover = interjectQueue.splice(0).join("\n\n");
+    if (leftover) {
+      textarea.value = leftover;
+      autoResize(textarea);
+      if (!stopRequested) { submit(); return; }
+    }
+    textarea.focus();
+  }
+
+  function clearThread() {
+    const initBlock = document.getElementById('voice-init-block');
+    if (thread.length === 0 && !initBlock) return;
+    if (!confirm("Clear the council thread?")) return;
+    thread = [];
+    rotationOffset = 0;
+    if (initBlock) initBlock.remove();
+    speechSynthesis.cancel();
+    speakQueue = [];
+    isSpeaking = false;
+    currentSpeakingCard = null;
+    renderThread();
+  }
+
+  // ── Input helpers ───────────────────────────────────────────────────────────
+  function handleKey(e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
+    autoResize(e.target);
+  }
+
+  function autoResize(el) {
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 140) + "px";
+  }
+
+  document.getElementById("prompt").addEventListener("input", function() { autoResize(this); });
+
+  // ── Utilities ───────────────────────────────────────────────────────────────
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function formatText(str) {
+    // Split into lines to preserve structure
+    return str
+      .split('\n')
+      .map(line => {
+        // Escape HTML first
+        let escaped = escHtml(line);
+        // Then apply markdown formatting
+        escaped = escaped
+          .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+          .replace(/\*(.+?)\*/g, "<em>$1</em>")
+          .replace(/`([^`]+)`/g, "<code style='font-family:Courier Prime,monospace;font-size:13px;background:rgba(255,255,255,.05);padding:1px 5px;border-radius:2px;'>$1</code>");
+        
+        // Detect numbered or bulleted list items and preserve their formatting
+        if (/^\d+\.\s|^[-•]\s/.test(line)) {
+          escaped = `<div style="margin-left: 20px;">${escaped}</div>`;
+        }
+        return escaped;
+      })
+      .join("<br>");
+  }
+
+  function exportJSON() {
+    const exportData = {
+      version: "1.0",
+      exportDate: new Date().toISOString(),
+      userName: userName,
+      thread: thread,
+      rotationOffset: rotationOffset,
+      blindMode: blindMode,
+      roundsPerTurn: roundsPerTurn,
+      activeModels: [...activeModels],
+      customModels: customModels,
+      modelColors: modelColors,
+      injectionMode: injectionMode
+    };
+    
+    const date = new Date().toLocaleString([], {dateStyle: 'short', timeStyle: 'short'}).replace(/[\/,:]/g, '-');
+    const filename = `council-export-${date}.json`;
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function importJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const importData = JSON.parse(e.target.result);
+        
+        // Restore state
+        if (importData.userName) userName = importData.userName;
+        if (importData.thread) thread = importData.thread;
+        if (importData.rotationOffset !== undefined) rotationOffset = importData.rotationOffset;
+        if (importData.blindMode !== undefined) blindMode = importData.blindMode;
+        if (importData.roundsPerTurn !== undefined) roundsPerTurn = importData.roundsPerTurn;
+        if (importData.activeModels && Array.isArray(importData.activeModels)) {
+          activeModels = new Set(importData.activeModels.filter(m => m && typeof m === 'string'));
+        }
+        if (importData.customModels) customModels = importData.customModels;
+        if (importData.modelColors) modelColors = importData.modelColors;
+        if (importData.injectionMode) injectionMode = importData.injectionMode;
+        
+        // Mark that this session was loaded
+        sessionLoaded = true;
+        
+        // Sync injection mode selector UI
+        const selector = document.getElementById('injection-mode-select');
+        if (selector) selector.value = injectionMode;
+        
+        // Add import confirmation to the top of the thread
+        const importNote = {
+          type: "import-note",
+          timestamp: new Date().toISOString(),
+          injectionMode: injectionMode,
+          exportDate: importData.exportDate
+        };
+        thread.unshift(importNote);
+        
+        // Re-render the UI
+        renderThread();
+        updateHeaderButtons();
+        
+        // Clear the file input so the same file can be imported again
+        document.getElementById('import-file-input').value = '';
+      } catch (err) {
+        console.error("Import error:", err);
+        alert(`Failed to import JSON: ${err.message}\n\nCheck console (F12) for details.`);
+        document.getElementById('import-file-input').value = '';
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function exportPDF() {
+    const date = new Date().toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'});
+    document.title = `Council · ${date}`;
+    window.print();
+    setTimeout(() => { document.title = 'The Council'; }, 2000);
+  }
+
+  function updateHeaderButtons() {
+    // Update blind mode button
+    document.getElementById("blind-btn").className = blindMode ? "pill-btn active-voice" : "pill-btn";
+    
+    // Update rounds button
+    document.getElementById("rounds-btn").textContent = `Rounds · ${roundsPerTurn}`;
+    
+    // Update model pills
+    document.querySelectorAll("[data-model-btn]").forEach(btn => {
+      const modelId = btn.getAttribute("data-model-btn");
+      btn.className = activeModels.includes(modelId) 
+        ? `pill-btn active-${modelId}`
+        : "pill-btn";
+    });
+  }
+
+  // ── Init ────────────────────────────────────────────────────────────────────
+  // Model pills render dynamically from the registry inside loadKeys().
+  loadKeys();
+  renderThread();
+  document.getElementById("prompt").focus();
+</script>
+</body>
+</html>
