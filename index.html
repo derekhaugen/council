@@ -123,6 +123,7 @@
       .hamburger-btn { display: block; }
       #header-controls { display: none !important; }
       .divider-btn { display: none !important; }
+      #json-btn { display: none; }
     }
 
     #export-json-btn, #import-json-btn {
@@ -925,7 +926,8 @@
     <button class="hamburger-btn" id="hamburger-btn" onclick="toggleHamburger()">☰</button>
     <div id="hamburger-menu" class="hamburger-menu">
       <button class="pill-btn" id="hamburger-config-btn" onclick="toggleConfig(); closeHamburger()">Config</button>
-      <button class="pill-btn" id="hamburger-json-btn" onclick="toggleJSON(); closeHamburger()">JSON</button>
+      <button class="pill-btn" onclick="exportJSON(); closeHamburger()">Export JSON</button>
+      <button class="pill-btn" onclick="document.getElementById('import-file-input').click(); closeHamburger()">Import JSON</button>
       <button class="pill-btn" onclick="exportPDF(); closeHamburger()">PDF</button>
       <button class="pill-btn" onclick="clearThread(); closeHamburger()">Clear</button>
       <input type="file" id="import-file-input" accept=".json" onchange="importJSON(event)" style="display:none;" />
