@@ -168,7 +168,7 @@
     .pill-btn.active-openai { border-color: var(--openai); color: var(--openai); background: rgba(25,195,125,.08); }
     .pill-btn.active-gemini { border-color: var(--gemini); color: var(--gemini); background: rgba(91,141,239,.08); }
     .response-body.stopped { color: var(--muted); font-style: italic; }
-    #stop-btn {
+    #stop-council-btn {
       display: none;
       font-family: 'Courier Prime', monospace;
       font-size: 10px;
@@ -184,8 +184,26 @@
       white-space: nowrap;
       align-self: flex-end;
     }
-    #stop-btn.visible { display: inline-block; }
-    #stop-btn:hover { background: rgba(232,133,90,.18); }
+    #stop-council-btn.visible { display: inline-block; }
+    #stop-council-btn:hover { background: rgba(232,133,90,.18); }
+
+    #skip-read-btn {
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 12px 18px;
+      border: 1px solid var(--muted-hi);
+      border-radius: 2px;
+      background: transparent;
+      color: var(--muted-hi);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      align-self: flex-end;
+      display: none;
+    }
+    #skip-read-btn:hover { border-color: var(--text); color: var(--text); background: rgba(202,197,186,.06); }
     .interjection {
       align-self: flex-end;
       max-width: 70%;
@@ -206,15 +224,7 @@
       margin-bottom: 4px;
     }
     .pill-btn.active-keys { border-color: var(--muted-hi); color: var(--text); background: rgba(151,156,174,.08); }
-    .pill-btn.pill-add {
-      border-style: dashed;
-      border-color: var(--border-hi);
-      color: var(--muted-hi);
-      min-width: 28px;
-      padding-left: 8px;
-      padding-right: 8px;
-    }
-    .pill-btn.pill-add:hover { border-color: var(--text); color: var(--text); }
+
     .pill-btn.active-voice  { border-color: var(--user); color: var(--user); background: rgba(157,143,255,.08); }
 
     .divider-btn {
@@ -237,7 +247,7 @@
 
     #config-panel.open { display: flex; }
 
-    #json-popover {
+    #export-popover {
       display: none;
       position: fixed;
       top: auto;
@@ -254,10 +264,10 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
 
-    #json-popover.open { display: flex; }
+    #export-popover.open { display: flex; }
     
     @media (min-width: 769px) {
-      #json-popover {
+      #export-popover {
         position: absolute;
         top: 65px;
         bottom: auto;
@@ -400,6 +410,36 @@
       letter-spacing: 3px;
       color: var(--muted);
       text-transform: uppercase;
+    }
+
+    .convene-button {
+      font-family: 'Courier Prime', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text);
+      border: 1px solid var(--muted-hi);
+      background: transparent;
+      padding: 12px 24px;
+      cursor: pointer;
+      transition: all 0.15s;
+      border-radius: 2px;
+      margin-bottom: 16px;
+    }
+
+    .convene-button:hover {
+      border-color: var(--text);
+      background: rgba(202, 197, 186, 0.06);
+    }
+
+    .convene-hint {
+      font-family: 'Lora', Georgia, serif;
+      font-size: 13px;
+      color: var(--muted-hi);
+      margin-top: 12px;
+      font-weight: 400;
+      letter-spacing: 0;
+      text-transform: none;
     }
 
     /* ── TURN ── */
@@ -919,61 +959,63 @@
     <div id="header-controls">
       <button class="pill-btn" id="config-btn" onclick="toggleConfig()">Config</button>
       <div class="divider-btn"></div>
-      <button class="pill-btn" id="json-btn" onclick="toggleJSON()">JSON</button>
-      <button class="pill-btn" onclick="exportPDF()">PDF</button>
+      <button class="pill-btn" id="export-btn" onclick="toggleExport()">Export</button>
       <button class="pill-btn" onclick="clearThread()">Clear</button>
     </div>
     <button class="hamburger-btn" id="hamburger-btn" onclick="toggleHamburger()">☰</button>
     <div id="hamburger-menu" class="hamburger-menu">
       <button class="pill-btn" id="hamburger-config-btn" onclick="toggleConfig(); closeHamburger()">Config</button>
-      <button class="pill-btn" onclick="exportJSON(); closeHamburger()">Export JSON</button>
-      <button class="pill-btn" onclick="document.getElementById('import-file-input').click(); closeHamburger()">Import JSON</button>
-      <button class="pill-btn" onclick="exportPDF(); closeHamburger()">PDF</button>
+      <button class="pill-btn" onclick="toggleExport(); closeHamburger()">Export</button>
       <button class="pill-btn" onclick="clearThread(); closeHamburger()">Clear</button>
       <input type="file" id="import-file-input" accept=".json" onchange="importJSON(event)" style="display:none;" />
     </div>
   </div>
 
-  <!-- JSON POPOVER -->
-  <div id="json-popover">
+  <!-- EXPORT POPOVER -->
+  <div id="export-popover">
     <button class="json-popover-btn" onclick="exportJSON()">Export JSON</button>
-    <button class="json-popover-btn" onclick="document.getElementById('import-file-input').click()">Import JSON</button>
+    <button class="json-popover-btn" onclick="exportPDF()">Export PDF</button>
   </div>
 
   <!-- CONFIG PANEL -->
   <div id="config-panel">
-    <div style="flex-basis: 100%; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-      <button class="pill-btn" id="voices-btn" onclick="initVoices()" style="padding: 5px 11px;">Voices</button>
-      <button class="pill-btn" id="autoread-btn" onclick="toggleAutoRead()" style="padding: 5px 11px;">Auto-Read</button>
-      <button class="pill-btn" id="stop-read-btn" onclick="stopAutoRead()" style="padding: 5px 11px;">Stop</button>
-      <span class="keys-note" style="margin: 0;">Voice synthesis controls</span>
+    <!-- API KEYS INSTRUCTION -->
+    <div style="flex-basis: 100%; border-bottom: 1px solid var(--border-hi); padding-bottom: 16px; margin-bottom: 12px;">
+      <h3 style="font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--text); margin-bottom: 8px; font-weight: 600;">API Keys Required</h3>
+      <p style="font-size: 12px; color: var(--muted-hi); line-height: 1.5; margin-bottom: 8px;">Add your API keys below. Get them from:</p>
+      <ul style="font-size: 12px; color: var(--muted-hi); line-height: 1.6; margin-left: 16px;">
+        <li><strong>Anthropic:</strong> <a href="https://console.anthropic.com/keys" target="_blank" style="color: var(--claude); text-decoration: none; border-bottom: 1px solid var(--claude);">console.anthropic.com/keys</a></li>
+        <li><strong>OpenAI:</strong> <a href="https://platform.openai.com/api/keys" target="_blank" style="color: var(--openai); text-decoration: none; border-bottom: 1px solid var(--openai);">platform.openai.com/api/keys</a></li>
+        <li><strong>Google:</strong> <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--gemini); text-decoration: none; border-bottom: 1px solid var(--gemini);">aistudio.google.com/app/apikey</a></li>
+      </ul>
+      <p style="font-size: 11px; color: var(--muted); margin-top: 8px; font-style: italic;">Keys are stored locally in your browser. Never shared or sent to any server.</p>
     </div>
-    <div style="flex-basis: 100%; border-top: 1px solid var(--border-hi); padding-top: 12px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-      <span class="key-label">Blind Mode</span>
-      <button class="pill-btn" id="config-blind-btn" onclick="toggleBlind()" style="padding: 5px 11px;">Off</button>
-      <span class="keys-note" style="margin: 0;">Hide responses until all models complete</span>
-    </div>
-    <div style="flex-basis: 100%; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-      <span class="key-label">Rounds</span>
-      <button class="pill-btn" id="config-rounds-btn" onclick="cycleRounds()" style="padding: 5px 11px;">1</button>
-      <span class="keys-note" style="margin: 0;">Deliberation rounds per turn</span>
-    </div>
-    <div style="flex-basis: 100%; border-top: 1px solid var(--border-hi); padding-top: 12px; display: flex; align-items: flex-start; gap: 15px; flex-direction: column;">
-      <span class="key-label">Models</span>
+
+    <!-- MODELS -->
+    <div style="flex-basis: 100%; border-bottom: 1px solid var(--border-hi); padding-bottom: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 15px; flex-direction: column;">
+      <h4 style="font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted-hi); font-weight: 600; margin: 0;">Models</h4>
       <div id="model-pills" style="display: flex; flex-wrap: wrap; gap: 8px; width: 100%;"></div>
       <span class="keys-note" style="margin: 0;">Select which models participate in this council</span>
+      
+      <!-- ADD MODEL FORM -->
+      <div id="custom-models-section" style="width: 100%; margin-top: 8px;">
+        <div id="custom-models-list"></div>
+        <div class="add-model-form">
+          <span class="key-label">Add Model</span>
+          <input class="key-input am-input" id="am-name" type="text" placeholder="Label (e.g. Llama 3.3)" />
+          <input class="key-input am-input wide" id="am-url" type="text" placeholder="Endpoint (e.g. https://openrouter.ai/api/v1/chat/completions)" />
+          <input class="key-input am-input" id="am-model" type="text" placeholder="Model ID (e.g. meta-llama/llama-3.3-70b)" />
+          <input class="key-input am-input" id="am-key" type="password" placeholder="API key" />
+          <input class="am-color" id="am-color" type="color" value="#C05AC0" title="Council color" />
+          <button class="pill-btn" onclick="addCustomModel()">+ Add</button>
+        </div>
+        <span class="keys-note">For OpenRouter, Groq, Together, Mistral: find the endpoint in their API docs (usually `https://api.[provider]/v1/chat/completions`). Model ID is listed in their model catalog. For local Ollama: endpoint is `http://localhost:11434/v1/chat/completions` and model names are what you've `ollama pull`'d. All must support OpenAI-compatible API format and CORS.</span>
+      </div>
     </div>
-    <div id="injection-mode-section" style="flex-basis: 100%; display: flex; align-items: center; gap: 15px;">
-      <span class="key-label">Context</span>
-      <select id="injection-mode-select" onchange="setInjectionMode(this.value)" style="background: var(--surface); border: 1px solid var(--border-hi); border-radius: 2px; padding: 7px 10px; color: var(--text); font-family: 'Courier Prime', monospace; font-size: 12.5px; outline: none;">
-        <option value="none">None (fresh start)</option>
-        <option value="full">Full (shared minutes)</option>
-        <option value="personal">Personal (your prior statements)</option>
-      </select>
-      <span class="keys-note" style="margin: 0; flex: 1;">How prior sessions inject into current context</span>
-    </div>
-    <div style="flex-basis: 100%; border-top: 1px solid var(--border-hi); padding-top: 12px; display: flex; align-items: flex-start; gap: 15px; flex-direction: column;">
-      <span class="key-label">Keys</span>
+
+    <!-- API KEYS INPUTS -->
+    <div style="flex-basis: 100%; border-bottom: 1px solid var(--border-hi); padding-bottom: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 15px; flex-direction: column;">
+      <h4 style="font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted-hi); font-weight: 600; margin: 0;">API Keys</h4>
       <div class="key-row">
         <span class="key-label">Your Name</span>
         <input class="key-input" id="user-name" type="text" placeholder="How the council should address you" oninput="saveUserName(this.value)" />
@@ -995,26 +1037,50 @@
       </div>
       <span class="keys-note">Stored in localStorage · sent only to each provider's API</span>
     </div>
-    <div id="custom-models-section">
-      <div id="custom-models-list"></div>
-      <div class="add-model-form">
-        <span class="key-label">Add Model</span>
-        <input class="key-input am-input" id="am-name" type="text" placeholder="Label (e.g. Llama 3.3)" />
-        <input class="key-input am-input wide" id="am-url" type="text" placeholder="Endpoint (e.g. https://openrouter.ai/api/v1/chat/completions)" />
-        <input class="key-input am-input" id="am-model" type="text" placeholder="Model ID (e.g. meta-llama/llama-3.3-70b)" />
-        <input class="key-input am-input" id="am-key" type="password" placeholder="API key" />
-        <input class="am-color" id="am-color" type="color" value="#C05AC0" title="Council color" />
-        <button class="pill-btn" onclick="addCustomModel()">+ Add</button>
+
+    <!-- CONVERSATION BEHAVIOR -->
+    <div style="flex-basis: 100%;">
+      <h4 style="font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted-hi); margin-bottom: 12px; font-weight: 600;">Conversation Behavior</h4>
+      
+      <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap; margin-bottom: 12px;">
+        <button class="pill-btn" id="voices-btn" onclick="initVoices()" style="padding: 5px 11px;">Voices</button>
+        <button class="pill-btn" id="autoread-btn" onclick="toggleAutoRead()" style="padding: 5px 11px;">Auto-Read</button>
+        <button class="pill-btn" id="stop-read-btn" onclick="stopAutoRead()" style="padding: 5px 11px;">Stop</button>
+        <span class="keys-note" style="margin: 0;">Voice synthesis controls</span>
       </div>
-      <span class="keys-note">For OpenRouter, Groq, Together, Mistral: find the endpoint in their API docs (usually `https://api.[provider]/v1/chat/completions`). Model ID is listed in their model catalog. For local Ollama: endpoint is `http://localhost:11434/v1/chat/completions` and model names are what you've `ollama pull`'d. All must support OpenAI-compatible API format and CORS.</span>
+      
+      <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap; margin-bottom: 12px;">
+        <span class="key-label">Blind Mode</span>
+        <button class="pill-btn" id="config-blind-btn" onclick="toggleBlind()" style="padding: 5px 11px;">Off</button>
+        <span class="keys-note" style="margin: 0;">Hide responses until all models complete</span>
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap; margin-bottom: 12px;">
+        <span class="key-label">Rounds</span>
+        <button class="pill-btn" id="config-rounds-btn" onclick="cycleRounds()" style="padding: 5px 11px;">1</button>
+        <span class="keys-note" style="margin: 0;">Deliberation rounds per turn</span>
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+        <span class="key-label">Context</span>
+        <select id="injection-mode-select" onchange="setInjectionMode(this.value)" style="background: var(--surface); border: 1px solid var(--border-hi); border-radius: 2px; padding: 7px 10px; color: var(--text); font-family: 'Courier Prime', monospace; font-size: 12.5px; outline: none;">
+          <option value="none">None (fresh start)</option>
+          <option value="full">Full (shared minutes)</option>
+          <option value="personal">Personal (your prior statements)</option>
+        </select>
+        <button class="pill-btn" onclick="document.getElementById('import-file-input').click()" style="padding: 5px 11px;">Import JSON</button>
+        <span class="keys-note" style="margin: 0; flex: 1;">How prior sessions inject into current context</span>
+      </div>
     </div>
+
   </div>
 
   <!-- THREAD -->
   <div id="thread">
     <div class="empty-state" id="empty">
       <div class="glyph">◈</div>
-      <p>Convene the council</p>
+      <button id="convene-btn" onclick="toggleConfig()" class="convene-button">Convene the council</button>
+      <p class="convene-hint">Add your API keys in the config panel to get started.</p>
     </div>
   </div>
 
@@ -1023,7 +1089,8 @@
     <div id="input-wrap">
       <textarea id="prompt" rows="2" placeholder="Put something to the council…" onkeydown="handleKey(event)"></textarea>
       <button id="send-btn" onclick="submit()">Send</button>
-      <button id="stop-btn" onclick="requestStop()" title="Stop the council (Esc)">Stop</button>
+      <button id="stop-council-btn" onclick="requestStop()" title="Stop the council (Esc)">Stop</button>
+      <button id="skip-read-btn" onclick="skipToNextResponse()" title="Skip to next response">Skip</button>
     </div>
     <div id="input-hint">↵ send &nbsp;·&nbsp; shift+↵ newline</div>
   </div>
@@ -1233,24 +1300,24 @@
     document.getElementById("config-btn").className = open ? "pill-btn active-keys" : "pill-btn";
   }
 
-  function toggleJSON() {
-    const popover = document.getElementById("json-popover");
+  function toggleExport() {
+    const popover = document.getElementById("export-popover");
     const open = popover.classList.toggle("open");
-    document.getElementById("json-btn").className = open ? "pill-btn active-keys" : "pill-btn";
+    document.getElementById("export-btn").className = open ? "pill-btn active-keys" : "pill-btn";
     
     // Close popover if clicking elsewhere
     if (open) {
-      document.addEventListener("click", closeJSONPopover);
+      document.addEventListener("click", closeExportPopover);
     }
   }
 
-  function closeJSONPopover(e) {
-    const popover = document.getElementById("json-popover");
-    const btn = document.getElementById("json-btn");
+  function closeExportPopover(e) {
+    const popover = document.getElementById("export-popover");
+    const btn = document.getElementById("export-btn");
     if (!popover.contains(e.target) && !btn.contains(e.target)) {
       popover.classList.remove("open");
       btn.className = "pill-btn";
-      document.removeEventListener("click", closeJSONPopover);
+      document.removeEventListener("click", closeExportPopover);
     }
   }
 
@@ -1339,14 +1406,7 @@
       applyPillState(btn, id, activeModels.has(id));
       wrap.appendChild(btn);
     });
-    // Roster grows where the roster lives: + sits with the models, not
-    // buried under "Keys".
-    const add = document.createElement("button");
-    add.className = "pill-btn pill-add";
-    add.textContent = "+";
-    add.title = "Add a model to the council";
-    add.onclick = openAddModel;
-    wrap.appendChild(add);
+
   }
 
   function openAddModel() {
@@ -1653,8 +1713,10 @@ Reply ONLY with valid JSON, no markdown:
   function toggleAutoRead() {
     autoRead = !autoRead;
     const btn = document.getElementById('autoread-btn');
+    const skipBtn = document.getElementById('skip-read-btn');
     btn.className = autoRead ? 'pill-btn active-voice' : 'pill-btn';
     btn.textContent = autoRead ? 'Auto-Read ◉' : 'Auto-Read';
+    skipBtn.style.display = autoRead ? 'inline-block' : 'none';
     if (!autoRead) {
       speechSynthesis.cancel();
       speakQueue = [];
@@ -1663,6 +1725,19 @@ Reply ONLY with valid JSON, no markdown:
         currentSpeakingCard.classList.remove('speaking');
         currentSpeakingCard = null;
       }
+    }
+  }
+
+  function skipToNextResponse() {
+    speechSynthesis.cancel();
+    isSpeaking = false;
+    if (currentSpeakingCard) {
+      currentSpeakingCard.classList.remove('speaking');
+      currentSpeakingCard = null;
+    }
+    // If there are more in the queue, process the next one
+    if (speakQueue.length > 0) {
+      processSpeakQueue();
     }
   }
 
@@ -1980,7 +2055,7 @@ Reply ONLY with valid JSON, no markdown:
   }
 
   function setRunning(running) {
-    document.getElementById("stop-btn").className = running ? "visible" : "";
+    document.getElementById("stop-council-btn").className = running ? "visible" : "";
   }
 
   // Interjections queued mid-deliberation. Delivered at the next round
@@ -2218,7 +2293,8 @@ Reply ONLY with valid JSON, no markdown:
         
         // Restore state
         if (importData.userName) userName = importData.userName;
-        if (importData.thread) thread = importData.thread;
+        // Filter out any existing import notes from the imported thread
+        if (importData.thread) thread = importData.thread.filter(t => t.type !== "import-note");
         if (importData.rotationOffset !== undefined) rotationOffset = importData.rotationOffset;
         if (importData.blindMode !== undefined) blindMode = importData.blindMode;
         if (importData.roundsPerTurn !== undefined) roundsPerTurn = importData.roundsPerTurn;
@@ -2268,11 +2344,13 @@ Reply ONLY with valid JSON, no markdown:
   }
 
   function updateHeaderButtons() {
-    // Update blind mode button
-    document.getElementById("blind-btn").className = blindMode ? "pill-btn active-voice" : "pill-btn";
+    // Update blind mode button in config panel
+    const blindBtn = document.getElementById("config-blind-btn");
+    if (blindBtn) blindBtn.className = blindMode ? "pill-btn active-voice" : "pill-btn";
     
-    // Update rounds button
-    document.getElementById("rounds-btn").textContent = `Rounds · ${roundsPerTurn}`;
+    // Update rounds button in config panel
+    const roundsBtn = document.getElementById("config-rounds-btn");
+    if (roundsBtn) roundsBtn.textContent = `Rounds · ${roundsPerTurn}`;
     
     // Update model pills
     document.querySelectorAll("[data-model-btn]").forEach(btn => {
